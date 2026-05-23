@@ -1,0 +1,83 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+-- state
+local tpwalking = false
+local tpwalkSpeed = 0
+
+-- config
+local STACK_AMOUNT = 0.2
+local FAST_STACK_AMOUNT = 2
+
+local ADD_KEY = Enum.KeyCode.KeypadOne
+local FAST_ADD_KEY = Enum.KeyCode.KeypadThree
+local RESET_KEY = Enum.KeyCode.KeypadTwo
+
+-------------------------------------------------
+-- TP WALK LOGIC
+-------------------------------------------------
+
+local function startTPWalk()
+	if tpwalking then return end
+	tpwalking = true
+
+	local char = player.Character
+	local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+	if not hum then
+		tpwalking = false
+		return
+	end
+
+	task.spawn(function()
+		while tpwalking and char and hum and hum.Parent do
+			local dt = RunService.Heartbeat:Wait()
+
+			if hum.MoveDirection.Magnitude > 0 then
+				pcall(function()
+					char:TranslateBy(hum.MoveDirection * tpwalkSpeed * dt * 10)
+				end)
+			end
+
+			if player.Character ~= char then
+				tpwalking = false
+			end
+		end
+	end)
+end
+
+local function stopTPWalk()
+	tpwalking = false
+end
+
+-------------------------------------------------
+-- KEYBINDS (ALL STACKING)
+-------------------------------------------------
+
+UserInputService.InputBegan:Connect(function(input, gp)
+	if gp then return end
+
+	if input.KeyCode == ADD_KEY then
+		tpwalkSpeed = tpwalkSpeed + STACK_AMOUNT
+		startTPWalk()
+
+	elseif input.KeyCode == FAST_ADD_KEY then
+		tpwalkSpeed = tpwalkSpeed + FAST_STACK_AMOUNT
+		startTPWalk()
+
+	elseif input.KeyCode == RESET_KEY then
+		stopTPWalk()
+		tpwalkSpeed = 0
+	end
+end)
+
+-------------------------------------------------
+-- RESPAWN SAFETY
+-------------------------------------------------
+
+player.CharacterAdded:Connect(function()
+	stopTPWalk()
+	tpwalkSpeed = 0
+end)
