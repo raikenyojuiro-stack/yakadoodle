@@ -961,7 +961,7 @@ autodrib:Button("Show Keybinds", "Shows The Keybinds For The Toggle Keybinds Fea
     local StarterGui = game:GetService("StarterGui")
     StarterGui:SetCore("SendNotification", {
         Title = "Keybinds",
-        Text = "Z = Auto-Dribble\nX = Move One\nC = Move Two",
+        Text = "Z = Auto-Dribble\nP = Move One\nX = Move Two",
         Duration = 4
     })
     task.delay(0.5, function()
@@ -1107,8 +1107,8 @@ if not autoSkillState.keybindSetup then
 
         local keyMap = {
             [Enum.KeyCode.Z] = {"toggleDetection", "Auto-Dribble"},
-            [Enum.KeyCode.X] = {"toggleCounter1", "Auto-Counter (Move One)"},
-            [Enum.KeyCode.C] = {"toggleCounter2", "Auto-Counter (Move Two)"},
+            [Enum.KeyCode.P] = {"toggleCounter1", "Auto-Counter (Move One)"},
+            [Enum.KeyCode.X] = {"toggleCounter2", "Auto-Counter (Move Two)"},
             [Enum.KeyCode.V] = {"toggleCounter3", "Auto-Counter (Move Three)"},
             [Enum.KeyCode.N] = {"toggleCounter4", "Auto-Counter (Move Four)"},
             [Enum.KeyCode.M] = {"toggleCounter5", "Auto-Counter (Move Five)"}
