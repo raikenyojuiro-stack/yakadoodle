@@ -9,7 +9,7 @@ local tpwalking = false
 local tpwalkSpeed = 0
 
 -- config
-local STACK_AMOUNT = 0.2
+local STACK_AMOUNT = 0.28
 local FAST_STACK_AMOUNT = 2
 
 local ADD_KEY = Enum.KeyCode.KeypadOne
