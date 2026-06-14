@@ -3040,7 +3040,7 @@ autogk:Button("Celeron's Auto GK Enhanced", "Click V To Toggle, Reset To Disable
             tackleArgs = {buffer.fromstring(buffers.base), {{"tackle"}}},
             emptyBuffer = buffer.fromstring(buffers["grabball"]),
             magnetBurstActive = false,
-            tackle_radius = 19.98,
+            tackle_radius = 24,
             terrain = Workspace.Terrain,
             cachedBall = nil,
             renderConn = nil,
