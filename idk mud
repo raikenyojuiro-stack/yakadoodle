@@ -3040,7 +3040,7 @@ autogk:Button("Celeron's Auto GK Enhanced", "Click V To Toggle, Reset To Disable
             tackleArgs = {buffer.fromstring(buffers.base), {{"tackle"}}},
             emptyBuffer = buffer.fromstring(buffers["grabball"]),
             magnetBurstActive = false,
-            tackle_radius = 24,
+            tackle_radius = 23,
             terrain = Workspace.Terrain,
             cachedBall = nil,
             renderConn = nil,
@@ -3148,7 +3148,7 @@ autogk:Button("Celeron's Auto GK Enhanced", "Click V To Toggle, Reset To Disable
 
             local dist = (hrp.Position - ball.Position).Magnitude
 
-            if dist > gkState.tackle_radius and dist <= 52 and ball.Position.Y > hrp.Position.Y + 5.5 then
+            if dist > gkState.tackle_radius and dist <= 52 and ball.Position.Y > hrp.Position.Y + 7 then
                 hum.Jump = true
             end
 
