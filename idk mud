@@ -2,7 +2,7 @@ if game.PlaceId == 139609232261520 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ghostofcelleron/Celeron/refs/heads/main/hgghhghghhgg"))()
 else
 
-local ui = loadstring(game:HttpGet("https://github.com/raikenyojuiro-stack/yakadoodle/blob/main/SOmething%20cool"))()
+local ui = loadstring(game:HttpGet("https://raw.githubusercontent.com/raikenyojuiro-stack/yakadoodle/refs/heads/main/SOmething%20cool"))()
 
 local win = ui:Create({
     Name = "Celeron's GUI (Azure Latch)",
