@@ -4120,33 +4120,94 @@ misctab:Toggle("Sae Pose", function()
     end
 end)
 
-misctab:Toggle("Assumptions", function()
-    emoteStates.assumptions = not emoteStates.assumptions
+local UserInputService = game:GetService("UserInputService")
+local SoundService = game:GetService("SoundService")
+local Players = game:GetService("Players")
 
-    local animationId = "rbxassetid://108778663919542"
-    local soundId = "rbxassetid://137023124734348"
+local animationId = "rbxassetid://108778663919542"
+local soundId = "rbxassetid://137023124734348"
 
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    local animator = humanoid:FindFirstChildOfClass("Animator")
+local player = Players.LocalPlayer
+
+local character
+local humanoid
+local animator
+local animationTrack
+
+local function cleanup()
+    if animationTrack then
+        animationTrack:Stop()
+        animationTrack = nil
+    end
+
+    local existingSound = SoundService:FindFirstChild("Assumptions")
+    if existingSound then
+        existingSound:Stop()
+        existingSound:Destroy()
+    end
+
+    emoteStates.assumptions = false
+end
+
+local function setupCharacter(newCharacter)
+    cleanup()
+
+    character = newCharacter
+    humanoid = character:WaitForChild("Humanoid")
+    animator = humanoid:WaitForChild("Animator")
 
     local animation = Instance.new("Animation")
     animation.AnimationId = animationId
 
-    local animationTrack = animator:LoadAnimation(animation)
+    animationTrack = animator:LoadAnimation(animation)
 
-    local sound
+    humanoid.Died:Connect(function()
+        cleanup()
+    end)
+end
+
+-- Set up current character
+if player.Character then
+    setupCharacter(player.Character)
+end
+
+-- Set up again after every respawn
+player.CharacterAdded:Connect(function(newCharacter)
+    setupCharacter(newCharacter)
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode ~= Enum.KeyCode.X then return end
+
+    -- Make sure the character is still valid
+    if not character or not character.Parent then
+        return
+    end
+
+    if not humanoid or humanoid.Health <= 0 then
+        return
+    end
+
+    emoteStates.assumptions = not emoteStates.assumptions
 
     if emoteStates.assumptions then
+        -- Prevent duplicate sounds
+        local existingSound = SoundService:FindFirstChild("Assumptions")
+        if existingSound then
+            existingSound:Stop()
+            existingSound:Destroy()
+        end
+
         animationTrack:Play()
-        sound = Instance.new("Sound")
+
+        local sound = Instance.new("Sound")
         sound.Name = "Assumptions"
         sound.SoundId = soundId
         sound.PlaybackSpeed = 0.17
         sound.Volume = 0.6
         sound.Looped = true
-        sound.Parent = game.SoundService
+        sound.Parent = SoundService
 
         local eq = Instance.new("EqualizerSoundEffect")
         eq.LowGain = 10
@@ -4156,11 +4217,11 @@ misctab:Toggle("Assumptions", function()
 
         sound:Play()
     else
-        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-            track:Stop()
+        if animationTrack then
+            animationTrack:Stop()
         end
 
-        local existingSound = game.SoundService:FindFirstChild("Assumptions")
+        local existingSound = SoundService:FindFirstChild("Assumptions")
         if existingSound then
             existingSound:Stop()
             existingSound:Destroy()
