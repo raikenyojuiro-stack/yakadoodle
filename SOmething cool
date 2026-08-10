@@ -661,7 +661,7 @@ function Library:Create(config)
 
 	local function toggleUI(inputObject, gameProcessedEvent)
 		if not gameProcessedEvent then
-			if inputObject.KeyCode == Enum.KeyCode.LeftAlt then 
+			if inputObject.KeyCode == Enum.KeyCode.LeftControl then 
 				if dragging == false then
 					if hidden == false then
 						hidden = true
