@@ -3004,169 +3004,171 @@ local autogk = maintab2:Folder("Auto Goalkeeper Features.", Color3.fromRGB(24, 2
 autogk:Label("Auto Goalkeeper: Automatically Plays As GK For You.")
 
 autogk:Button("Celeron's Auto GK Enhanced", "Click V To Toggle, Reset To Disable.", function()
-    task.spawn(function()
-        local Players = game:GetService("Players")
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local Workspace = game:GetService("Workspace")
-        local RunService = game:GetService("RunService")
-        local UserInputService = game:GetService("UserInputService")
+task.spawn(function()
+local plr = Players.LocalPlayer
+local char = plr.Character or plr.CharacterAdded:Wait()
+local hum = char:WaitForChild("Humanoid")
+local hrp = char:WaitForChild("HumanoidRootPart")
 
-        local plr = Players.LocalPlayer
-        local char = plr.Character or plr.CharacterAdded:Wait()
-        local hum = char:WaitForChild("Humanoid")
-        local hrp = char:WaitForChild("HumanoidRootPart")
+local gui = Instance.new("ScreenGui")
+gui.ResetOnSpawn = false
+gui.Parent = plr.PlayerGui
 
-        local gui = Instance.new("ScreenGui")
-        gui.ResetOnSpawn = false
-        gui.Parent = plr.PlayerGui
+local dot = Instance.new("Frame")
+dot.Size = UDim2.new(0.012, 0, 0.025, 0)
+dot.Position = UDim2.new(0.988, 0, 0.975, 0)
+dot.BorderSizePixel = 0
+dot.Parent = gui
 
-        local dot = Instance.new("Frame")
-        dot.Size = UDim2.new(0.012, 0, 0.025, 0)
-        dot.Position = UDim2.new(0.988, 0, 0.975, 0)
-        dot.BorderSizePixel = 0
-        dot.Parent = gui
+local gkState = {
+    enabled = true,
+    pause = false,
+    look = nil,
+    ballHolder = ReplicatedStorage.workspace.ballHolder,
+    lastHolder = nil,
+    remote = ReplicatedStorage:WaitForChild("ByteNetReliable"),
+    map = Workspace:WaitForChild("map"),
+    GRAVITY = Vector3.new(0, -Workspace.Gravity, 0),
+    velSmooth = Vector3.zero,
+    lastVel = Vector3.zero,
+    tackleArgs = {buffer.fromstring(buffers.base), {{"tackle"}}},
+    emptyBuffer = buffer.fromstring(buffers["grabball"]),
+    magnetBurstActive = false,
+    tackle_radius = 27,
+    terrain = Workspace.Terrain,
+    cachedBall = nil,
+    renderConn = nil,
+    inputConn = nil,
+    holderConn = nil,
+    ballAdded = nil,
+    ballRemoved = nil,
+    diedConn = nil,
+    charAddedConn = nil
+}
 
-        local gkState = {
-            enabled = true,
-            pause = false,
-            look = nil,
-            ballHolder = ReplicatedStorage.workspace.ballHolder,
-            lastHolder = nil,
-            remote = ReplicatedStorage:WaitForChild("ByteNetReliable"),
-            map = Workspace:WaitForChild("map"),
-            GRAVITY = Vector3.new(0, -Workspace.Gravity, 0),
-            velSmooth = Vector3.zero,
-            lastVel = Vector3.zero,
-            tackleArgs = {buffer.fromstring(buffers.base), {{"tackle"}}},
-            emptyBuffer = buffer.fromstring(buffers["grabball"]),
-            magnetBurstActive = false,
-            tackle_radius = 23,
-            terrain = Workspace.Terrain,
-            cachedBall = nil,
-            renderConn = nil,
-            inputConn = nil,
-            holderConn = nil,
-            ballAdded = nil,
-            ballRemoved = nil,
-            diedConn = nil,
-            charAddedConn = nil
-        }
+gkState.look = Instance.new("AlignOrientation")
+gkState.look.Name = "AutoGKLook"
+gkState.look.Mode = Enum.OrientationAlignmentMode.OneAttachment
+gkState.look.Attachment0 = hrp:WaitForChild("RootAttachment")
+gkState.look.Responsiveness = 1200
+gkState.look.MaxTorque = math.huge
+gkState.look.Enabled = false
+gkState.look.Parent = hrp
 
-        gkState.look = Instance.new("AlignOrientation")
-        gkState.look.Name = "AutoGKLook"
-        gkState.look.Mode = Enum.OrientationAlignmentMode.OneAttachment
-        gkState.look.Attachment0 = hrp:WaitForChild("RootAttachment")
-        gkState.look.Responsiveness = 1200
-        gkState.look.MaxTorque = math.huge
+gkState.lastHolder = gkState.ballHolder.Value
+
+local function updateindicator()
+    dot.BackgroundColor3 = gkState.enabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
+end
+
+local function cleanup()
+    gkState.enabled = false
+    if gkState.renderConn then gkState.renderConn:Disconnect() end
+    if gkState.inputConn then gkState.inputConn:Disconnect() end
+    if gkState.holderConn then gkState.holderConn:Disconnect() end
+    if gkState.ballAdded then gkState.ballAdded:Disconnect() end
+    if gkState.ballRemoved then gkState.ballRemoved:Disconnect() end
+    if gkState.diedConn then gkState.diedConn:Disconnect() end
+    if gkState.charAddedConn then gkState.charAddedConn:Disconnect() end
+    if gkState.look then gkState.look:Destroy() end
+    if gui then gui:Destroy() end
+end
+
+gkState.holderConn = gkState.ballHolder.Changed:Connect(function(cur)
+    if gkState.lastHolder == char and cur == nil then
+        gkState.pause = true
+        task.delay(2.6, function() gkState.pause = false end)
+    end
+    gkState.lastHolder = cur
+end)
+
+gkState.ballAdded = gkState.terrain.ChildAdded:Connect(function(child)
+    if child.Name == "Ball" then gkState.cachedBall = child end
+end)
+
+gkState.ballRemoved = gkState.terrain.ChildRemoved:Connect(function(child)
+    if child == gkState.cachedBall then gkState.cachedBall = nil end
+end)
+
+local function predictgoalimpact(pos, vel, accel, goal)
+    if not goal then return nil end
+    local cf = goal.CFrame
+    local normal = cf.LookVector
+    local goalPos = cf.Position
+    local rel = pos - goalPos
+    local a = 0.5 * accel:Dot(normal)
+    local b = vel:Dot(normal)
+    local c = rel:Dot(normal)
+    if math.abs(a) < 1e-6 then
+        if math.abs(b) < 1e-6 then return nil end
+        local t = -c / b
+        return t > 0 and t
+    end
+    local disc = b*b - 4*a*c
+    if disc < 0 then return nil end
+    local sd = math.sqrt(disc)
+    local t1 = (-b - sd) / (2*a)
+    local t2 = (-b + sd) / (2*a)
+    return (t1 > 0 and t1) or (t2 > 0 and t2)
+end
+
+gkState.renderConn = RunService.RenderStepped:Connect(function(dt)
+    if not gkState.enabled then return end
+
+    local ball = gkState.cachedBall
+    if not ball or plr.Team == game.Teams.lobby or gkState.pause then
         gkState.look.Enabled = false
-        gkState.look.Parent = hrp
+        return
+    end
 
-        gkState.lastHolder = gkState.ballHolder.Value
+    local currentHolder = gkState.ballHolder.Value
 
-        local function updateindicator()
-            dot.BackgroundColor3 = gkState.enabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
+    if currentHolder and currentHolder ~= char and currentHolder:FindFirstChild("HumanoidRootPart") then
+        local holderRoot = currentHolder.HumanoidRootPart
+        gkState.look.Enabled = true
+        gkState.look.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(holderRoot.Position.X, hrp.Position.Y, holderRoot.Position.Z))
+    else
+        local rawVel = ball.AssemblyLinearVelocity
+        gkState.velSmooth = gkState.velSmooth:Lerp(rawVel, math.clamp(dt*15, 0, 1))
+        local accel = (gkState.velSmooth - gkState.lastVel) / math.max(dt, 1/240)
+        gkState.lastVel = gkState.velSmooth
+
+        local goal = (plr.Team == game.Teams.B and gkState.map.Bgoal) or (plr.Team == game.Teams.A and gkState.map.Agoal)
+
+        local tImpact = predictgoalimpact(ball.Position, gkState.velSmooth, accel, goal)
+
+        local predicted
+        if tImpact then
+            predicted = ball.Position + gkState.velSmooth * tImpact + 0.5 * accel * tImpact^2
+        else
+            predicted = ball.Position + gkState.velSmooth * 0.25 + 0.5 * gkState.GRAVITY * 0.0625
         end
 
-        local function cleanup()
-            gkState.enabled = false
-            if gkState.renderConn then gkState.renderConn:Disconnect() end
-            if gkState.inputConn then gkState.inputConn:Disconnect() end
-            if gkState.holderConn then gkState.holderConn:Disconnect() end
-            if gkState.ballAdded then gkState.ballAdded:Disconnect() end
-            if gkState.ballRemoved then gkState.ballRemoved:Disconnect() end
-            if gkState.diedConn then gkState.diedConn:Disconnect() end
-            if gkState.charAddedConn then gkState.charAddedConn:Disconnect() end
-            if gkState.look then gkState.look:Destroy() end
-            if gui then gui:Destroy() end
-        end
+        gkState.look.Enabled = true
+        gkState.look.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(predicted.X, hrp.Position.Y, predicted.Z))
+    end
 
-        gkState.holderConn = gkState.ballHolder.Changed:Connect(function(cur)
-            if gkState.lastHolder == char and cur == nil then
-                gkState.pause = true
-                task.delay(2.6, function() gkState.pause = false end)
-            end
-            gkState.lastHolder = cur
-        end)
+    local dist = (hrp.Position - ball.Position).Magnitude
 
-        gkState.ballAdded = gkState.terrain.ChildAdded:Connect(function(child)
-            if child.Name == "Ball" then gkState.cachedBall = child end
-        end)
+    if dist > gkState.tackle_radius and dist <= 53 and ball.Position.Y > hrp.Position.Y + 11 then
+        hum.Jump = true
+    end
 
-        gkState.ballRemoved = gkState.terrain.ChildRemoved:Connect(function(child)
-            if child == gkState.cachedBall then gkState.cachedBall = nil end
-        end)
-
-        local function predictgoalimpact(pos, vel, accel, goal)
-            if not goal then return nil end
-            local cf = goal.CFrame
-            local normal = cf.LookVector
-            local goalPos = cf.Position
-            local rel = pos - goalPos
-            local a = 0.5 * accel:Dot(normal)
-            local b = vel:Dot(normal)
-            local c = rel:Dot(normal)
-            if math.abs(a) < 1e-6 then
-                if math.abs(b) < 1e-6 then return nil end
-                local t = -c / b
-                return t > 0 and t
-            end
-            local disc = b*b - 4*a*c
-            if disc < 0 then return nil end
-            local sd = math.sqrt(disc)
-            local t1 = (-b - sd) / (2*a)
-            local t2 = (-b + sd) / (2*a)
-            return (t1 > 0 and t1) or (t2 > 0 and t2)
-        end
-
-        gkState.renderConn = RunService.RenderStepped:Connect(function(dt)
-            if not gkState.enabled then return end
-
-            local ball = gkState.cachedBall
-            if not ball or plr.Team == game.Teams.lobby or gkState.pause then
-                gkState.look.Enabled = false
-                return
-            end
-
-            local rawVel = ball.AssemblyLinearVelocity
-            gkState.velSmooth = gkState.velSmooth:Lerp(rawVel, math.clamp(dt*15, 0, 1))
-            local accel = (gkState.velSmooth - gkState.lastVel) / math.max(dt, 1/240)
-            gkState.lastVel = gkState.velSmooth
-
-            local goal = (plr.Team == game.Teams.B and gkState.map.Bgoal) or (plr.Team == game.Teams.A and gkState.map.Agoal)
-
-            local tImpact = predictgoalimpact(ball.Position, gkState.velSmooth, accel, goal)
-
-            local predicted
-            if tImpact then
-                predicted = ball.Position + gkState.velSmooth * tImpact + 0.5 * accel * tImpact^2
-            else
-                predicted = ball.Position + gkState.velSmooth * 0.25 + 0.5 * gkState.GRAVITY * 0.0625
-            end
-
-            gkState.look.Enabled = true
-            gkState.look.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(predicted.X, hrp.Position.Y, predicted.Z))
-
-            local dist = (hrp.Position - ball.Position).Magnitude
-
-            if dist > gkState.tackle_radius and dist <= 52 and ball.Position.Y > hrp.Position.Y + 11 then
-                hum.Jump = true
-            end
-
-            if dist <= gkState.tackle_radius then
-                gkState.remote:FireServer(unpack(gkState.tackleArgs))
-                if not gkState.magnetBurstActive then
-                    gkState.magnetBurstActive = true
-                    task.spawn(function()
-                        local start = os.clock()
-                        while os.clock() - start < 0.86 and gkState.enabled do
-                            gkState.remote:FireServer(gkState.emptyBuffer)
-                            task.wait(0.1)
-                        end
-                        gkState.magnetBurstActive = false
-                    end)
+    if dist <= gkState.tackle_radius then
+        gkState.remote:FireServer(unpack(gkState.tackleArgs))
+        if not gkState.magnetBurstActive then
+            gkState.magnetBurstActive = true
+            task.spawn(function()
+                local start = os.clock()
+                while os.clock() - start < 0.897 and gkState.enabled do
+                    gkState.remote:FireServer(gkState.emptyBuffer)
+                    task.wait(0.125)
                 end
-            end
-        end)
+                gkState.magnetBurstActive = false
+            end)
+        end
+    end
+end)
 
         gkState.inputConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
