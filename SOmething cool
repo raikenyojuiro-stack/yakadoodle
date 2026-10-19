@@ -1,3 +1,4 @@
+```
 --made by daffy734 you NERD, get out of here
 
 print("🎨 Daffy's UI: ver 1.17.4")
@@ -661,7 +662,7 @@ function Library:Create(config)
 
 	local function toggleUI(inputObject, gameProcessedEvent)
 		if not gameProcessedEvent then
-			if inputObject.KeyCode == Enum.KeyCode.LeftControl then 
+			if inputObject.KeyCode == Enum.KeyCode.RightControl then 
 				if dragging == false then
 					if hidden == false then
 						hidden = true
@@ -1917,3 +1918,4 @@ function Library:Create(config)
 end
 
 return Library
+```
