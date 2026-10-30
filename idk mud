@@ -1,17 +1,18 @@
+executor = identifyexecutor and string.lower(identifyexecutor()) or ""
+if string.find(executor, "xeno") or string.find(executor, "solara") or Solara or Xeno then
+    game.Players.LocalPlayer:Kick("hey this script dont support xeno / solara, upgrade nowww")
+end
+
 if game.PlaceId == 139609232261520 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ghostofcelleron/Celeron/refs/heads/main/hgghhghghhgg"))()
 else
 
--- Load the existing UI, changing its toggle from Right Alt to Left Control.
-local uiSource = game:HttpGet("https://raw.githubusercontent.com/ghostofcelleron/Celeron/refs/heads/main/ui")
-uiSource = uiSource:gsub("RightAlt", "LeftControl")
-                   :gsub("Right Alt", "Left Control")
-local ui = loadstring(uiSource)() -- yo ts ui :rofl:
+local ui = loadstring(game:HttpGet("https://raw.githubusercontent.com/ghostofcelleron/Celeron/refs/heads/main/ui"))() -- yo ts ui :rofl:
 
 local win = ui:Create({
     Name = "Celeron's GUI (Azure Latch)",
-    ThemeColor = Color3.fromRGB(111, 111, 111),
-	ThemeGradient = Color3.fromRGB(10, 10, 10),
+    ThemeColor = Color3.fromRGB(152, 58, 201),
+	ThemeGradient = Color3.fromRGB(95, 11, 143),
     StartupSound = "rbxassetid://6958727243",
     ThemeFont = Enum.Font.GothamBold,
 	ToggledSideBar = true
@@ -28,36 +29,58 @@ local helptab = win:Tab("Info")
 
 hometab:Label("Script Made By Celeron! Check Info For Additional Credits.")
 hometab:Label("Join The Discord Server In Info For Updates / Suggestions.")
-helptab:Label("Show / Hide GUI: Left Control")
+helptab:Label("Show / Hide GUI: Right Alt")
 teleporttab:Label("Map Teleports, No Prerequisites To Use!")
 misctab:Label("Miscellaneous Features, They Give No Advantages In-Game!")
 exploittab:Label("This Tab Comes With Useful Features.")
 
---- IGNORE THESE
-local buffers = {}
+--- buffers brrrrrr
+local buffers = setmetatable({}, {__index = function(_, k) return k end})
 
-local function decode(s)
-	local t = {}
-	for n in s:gmatch("%d+") do
-		table.insert(t, string.char(tonumber(n)))
-	end
-	return table.concat(t)
-end
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/ghostofcelleron/Celeron/refs/heads/main/buffers"))()
-repeat
-	task.wait()
-until game.Lighting:FindFirstChild("BUFFERSTRINGS")
-
-local folder = game.Lighting:FindFirstChild("BUFFERSTRINGS")
-for _, val in ipairs(folder:GetChildren()) do
-	buffers[val.Name] = decode(val.Value)
-end
-folder:Destroy()
-
-for k, v in pairs(buffers) do
-	print("buffers key:", k, #v .. " bytes")
-end
+NET = (function()
+    local Packets = require(game:GetService("ReplicatedStorage"):WaitForChild("packets"))
+    local warned = {}
+    
+    local function warnOnce(key, message)
+        if not warned[key] then 
+            warned[key] = true
+            warn("[Network Shim] " .. message) 
+        end
+    end
+    
+    local function convertToString(inputData)
+        if type(inputData) == "string" then return inputData end
+        if typeof(inputData) == "buffer" then return buffer.tostring(inputData) end
+    end
+    
+    local netShim = {}
+    
+    function netShim.FireServer(_, dataBuffer, actionsList)
+        local bufferType = convertToString(dataBuffer)
+        
+        if bufferType == "base" then
+            if type(actionsList) ~= "table" then return end
+            
+            for _, primaryAction in ipairs(actionsList) do
+                if type(primaryAction) == "table" then
+                    local success = pcall(Packets.bytenet_use.send, primaryAction)
+                    if not success then 
+                        warnOnce("use_" .. tostring(primaryAction), "bytenet_use execution failed for: '" .. tostring(primaryAction) .. "'") 
+                    end
+                end
+            end
+            
+        elseif bufferType == "grabball" then
+            local success = pcall(Packets.bytenet_findBall.send, actionsList)
+            if not success then 
+                warnOnce("grab", "bytenet_findBall execution channel failed.") 
+            end
+        end
+    end
+    
+    netShim.fireServer = netShim.FireServer
+    return netShim
+end)()
 ---
 
 local Players = game:GetService("Players")
@@ -65,6 +88,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
 
 helptab:Button("Copy Owner Discord Username", "Copies The Owner's Discord Username To Your Clipboard.", function()
@@ -99,10 +123,10 @@ helptab:Label("Auto Config: Serlicia.")
 if math.random(1,50) == 1 then
     hometab:Banner("17327779381", 385)
 else
-    hometab:Banner("13308582899", 135)
+    hometab:Banner("93012899590948", 135)
 end
 
-notifsup = maintab2:Folder("Notification Suppression.", Color3.fromRGB(24, 255, 228), true)
+notifsup = maintab2:Folder("Notification Suppression.", Color3.fromRGB(169, 5, 255), true)
 notifsup:Label("Notification Suppression: Useful When Streaming.")
 
 local suppressNotifs = false
@@ -123,7 +147,7 @@ for _, obj in ipairs(workspace:GetDescendants()) do
 	end
 end
 
-local meta = maintab:Folder("Metavision Features.", Color3.fromRGB(24, 255, 228), true)
+meta = maintab:Folder("Metavision Features.", Color3.fromRGB(169, 5, 255), true)
 meta:Label("Metavision Features.")
 
 meta:Button("Metavision V1", "This Feature Emulates Having Isagi's Metavision From The Show.", function()
@@ -134,7 +158,7 @@ meta:Button("Metavision V2", "Similar To V1, Only Can Be Used Below 1:30 On Cloc
     loadstring(game:HttpGet("https://pastebin.com/raw/HfpQBAsF"))()
 end)
 
-local ballfolder = maintab:Folder("Ball Features.", Color3.fromRGB(24, 255, 228), true)
+local ballfolder = maintab:Folder("Ball Features.", Color3.fromRGB(169, 5, 255), true)
 ballfolder:Label("Ball Features.")
 
 local autoGoalState = {
@@ -186,7 +210,7 @@ ballfolder:Toggle("Auto Goal", "Attempts To Steal The Ball And Score.", function
                     local localroot = localplayer.Character:FindFirstChild("HumanoidRootPart")
                     if otherball and otherroot and localroot then
                         localroot.CFrame = otherball.CFrame
-                        replicatedstorage:WaitForChild("ByteNetReliable"):FireServer(
+                        NET:FireServer(
                             buffer.fromstring(buffers["base"]),
                             {{"tackle"}}
                         )
@@ -211,7 +235,7 @@ ballfolder:Toggle("Auto Goal", "Attempts To Steal The Ball And Score.", function
                     if root and goal then
                         root.CFrame = goal.CFrame
                         task.wait(0.185)
-                        replicatedstorage:WaitForChild("ByteNetReliable"):FireServer(
+                        NET:FireServer(
                             buffer.fromstring(buffers["base"]),
                             {{"kick", 20, false, vector.create(0, 1, 0)}}
                         )
@@ -255,7 +279,7 @@ ballfolder:Toggle("Always Ball", "Attempts To Always Hold The Ball (zero gravity
                         local otherroot = plr.Character:FindFirstChild("HumanoidRootPart")
                         if otherball and otherroot and root then
                             root.CFrame = otherball.CFrame
-                            game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(
+                            NET:FireServer(
                                 buffer.fromstring(buffers["base"]),
                                 {{"tackle"}}
                             )
@@ -272,7 +296,7 @@ end)
 
 local flowPartData = {
     LocalPlayer = game:GetService("Players").LocalPlayer,
-    ByteNetReliable = game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"),
+    ByteNetReliable = NET,
     flowPart = nil,
     flowActive = false,
     flowConnection = nil,
@@ -547,7 +571,7 @@ ballfolder:Button("Steal Ball (Aiku)", "Repeatedly Attempts To Get The Ball Via 
     end)
 end)
 
-ballfolder:Button("Bring Ball (Aiku)", "Steals The Ball  Via Reflex Tackle Then Teleports Back. Click Again To Cancel.", function()
+ballfolder:Button("Bring Ball (Aiku)", "Steals The Ball Via Reflex Tackle Then Teleports Back. Click Again To Cancel.", function()
     local hrp = flowPartData.LocalPlayer.Character and flowPartData.LocalPlayer.Character.HumanoidRootPart
     if not hrp then return end
 
@@ -589,7 +613,7 @@ ballfolder:Button("Bring Ball (Aiku)", "Steals The Ball  Via Reflex Tackle Then 
     end)
 end)
 
-local nocd = maintab:Folder("No Cooldown Features.", Color3.fromRGB(24, 255, 228), true)
+local nocd = maintab:Folder("No Cooldown Features.", Color3.fromRGB(169, 5, 255), true)
 nocd:Label("No Cooldown Features. Please Note This Is Exclusive To PC.")
 
 userInputService = game:GetService("UserInputService")
@@ -777,7 +801,7 @@ if not dashState.dashBindsSetup then
     end)
 end
 
-local breakball = maintab:Folder("Break Ball Features.", Color3.fromRGB(24, 255, 228), true)
+local breakball = maintab:Folder("Break Ball Features.", Color3.fromRGB(169, 5, 255), true)
 breakball:Label("Break Ball Features.")
 
 breakball:Button("Break Ball (Player Method, Req. Ball)", "Breaks The Ball By Going Extremely High Up.", function()
@@ -825,7 +849,7 @@ breakball:Button("Permanent Break Ball (Req. Ball)", "Breaks The Ball By Placing
     game.Players.LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(1, -49999, 1))
 end)
 
-local ballmag = maintab2:Folder("Ball Magnet Features.", Color3.fromRGB(24, 255, 228), true)
+local ballmag = maintab2:Folder("Ball Magnet Features.", Color3.fromRGB(169, 5, 255), true)
 ballmag:Label("Original Ball Magnet: Allows You To Grab The Ball From Further Away.")
 
 local ballMagnetState = {
@@ -872,7 +896,7 @@ ballmag:Toggle("Ball Magnet", "Ball Magnet, Uses Set Radius As Range.", function
                 if dist <= radius and (time() - ballMagnetState.lastFire) >= ballMagnetState.fire_intrv then
                     ballMagnetState.lastFire = time()
                     pcall(function()
-                        game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(buffers["grabball"]))
+                        NET:FireServer(buffer.fromstring(buffers["grabball"]))
                     end)
                 end
             end
@@ -984,7 +1008,7 @@ ballmag:Toggle("Ball Magnet Radius Hitbox", "Shows The Magnet's Radius Hitbox.",
     end)
 end)
 
-local autodrib = maintab2:Folder("Auto Dribble / Counter Features.", Color3.fromRGB(24, 255, 228), true)
+local autodrib = maintab2:Folder("Auto Dribble / Counter Features.", Color3.fromRGB(169, 5, 255), true)
 autodrib:Label("Set The Auto-Counter Number To Your Character's Counter Move.")
 
 local tick = tick
@@ -1020,13 +1044,140 @@ local autoSkillState = {
     playerCooldown = 0.33,
 }
 
-local buffer = buffer or { fromstring = function(str) return str end }
 local player = Players.LocalPlayer
 local localplayer = player
+local playerGui = player:WaitForChild("PlayerGui")
 
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local extraHud = playerGui:WaitForChild("ExtraHud")
+local fpsCounter = extraHud:WaitForChild("FPSCounter")
+local icon = fpsCounter:WaitForChild("icon")
+
+local existingGui = playerGui:FindFirstChild("cubies")
+if existingGui then
+    existingGui:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "cubies"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local cubesizeeee = 15
+local gapbetweenuisyesireallylikelongvariablenameshowdyouknow = 3           
+local icantrememberwhatthisisgapxtho = 10    
+local offsetfrompingui = 30 
+
+local layoutCounters = {
+    {key = "toggleDribble", labelText = "Z"},
+    {key = "toggleCounter1", labelText = "1"},
+    {key = "toggleCounter2", labelText = "2"},
+    {key = "toggleCounter3", labelText = "3"},
+    {key = "toggleCounter4", labelText = "4"},
+    {key = "toggleCounter5", labelText = "5"},
+    {key = "toggleTSpecial", labelText = "L"},
+}
+
+local visualCubeElements = {}
+
+local positionCubes
+
+local function updcounterui()
+    if not autoSkillState.showActiveCounters then 
+        screenGui.Enabled = false
+        return 
+    else
+        screenGui.Enabled = true
+        if #screenGui:GetChildren() == 0 then
+            positionCubes()
+            return
+        end
+    end
+
+    for idx, configuration in ipairs(layoutCounters) do
+        local frameElement = visualCubeElements[idx]
+        if frameElement then
+            local isToggledActive = autoSkillState[configuration.key]
+            if isToggledActive then
+                frameElement.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+            else
+                frameElement.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            end
+        end
+    end
+end
+
+function positionCubes()
+    local iconPos = icon.AbsolutePosition
+    local iconSize = icon.AbsoluteSize
+    
+    local startX = iconPos.X
+    local startY = iconPos.Y + iconSize.Y + offsetfrompingui
+    
+    screenGui:ClearAllChildren()
+    visualCubeElements = {}
+    
+    for i, configuration in ipairs(layoutCounters) do
+        local labelText = configuration.labelText
+        local frame = Instance.new("Frame")
+        frame.Name = "Cube_" .. labelText
+        
+        local posX = startX
+        local posY = startY + ((i - 1) * (cubesizeeee + gapbetweenuisyesireallylikelongvariablenameshowdyouknow))
+        
+        frame.Size = UDim2.new(0, cubesizeeee, 0, cubesizeeee)
+        frame.Position = UDim2.new(0, posX, 0, posY)
+        frame.BorderSizePixel = 0
+        frame.Parent = screenGui
+        
+        visualCubeElements[i] = frame
+        
+        local label = Instance.new("TextLabel")
+        label.Name = "Label_" .. labelText
+        
+        local labelX = posX + cubesizeeee + icantrememberwhatthisisgapxtho
+        label.Size = UDim2.new(0, cubesizeeee, 0, cubesizeeee)
+        label.Position = UDim2.new(0, labelX, 0, posY)
+        label.Text = labelText
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.BackgroundTransparency = 1
+        label.TextSize = 14
+        label.Font = Enum.Font.SourceSansBold
+        label.TextXAlignment = Enum.TextXAlignment.Center
+        label.TextYAlignment = Enum.TextYAlignment.Center
+        label.Parent = screenGui
+    end
+    
+    for idx, configuration in ipairs(layoutCounters) do
+        local frameElement = visualCubeElements[idx]
+        if frameElement then
+            local isToggledActive = autoSkillState[configuration.key]
+            if isToggledActive then
+                frameElement.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+            else
+                frameElement.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            end
+        end
+    end
+end
+
+task.wait(1)
+if autoSkillState.showActiveCounters then
+    positionCubes()
+else
+    screenGui.Enabled = false
+end
+icon:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+    if autoSkillState.showActiveCounters then
+        positionCubes()
+    end
+end)
+
+icon:GetPropertyChangedSignal("AbsolutePosition"):Connect(positionCubes)
+
 
 local steal_anims = {
     "rbxassetid://109744655458082",
@@ -1042,78 +1193,9 @@ local function notify2(title, text, duration)
     end
 end
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AutoCounterStatus"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
-local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(0, 320, 0, 360)
-statusFrame.Position = UDim2.new(1, -340, 0.5, -180)
-statusFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-statusFrame.BorderSizePixel = 0
-statusFrame.BackgroundTransparency = 0.1
-statusFrame.Visible = false
-statusFrame.Parent = screenGui
-
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 10)
-uiCorner.Parent = statusFrame
-
-local uiStroke = Instance.new("UIStroke")
-uiStroke.Thickness = 2
-uiStroke.Color = Color3.fromRGB(0, 0, 0)
-uiStroke.Parent = statusFrame
-
-local uiList = Instance.new("UIListLayout")
-uiList.SortOrder = Enum.SortOrder.LayoutOrder
-uiList.Padding = UDim.new(0, 6)
-uiList.Parent = statusFrame
-
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Auto Counters"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextScaled = true
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Parent = statusFrame
-
-local statusLabels = {}
-local counters = {
-    {name = "Auto Dribble", key = "toggleDribble", bind = "Z"},
-    {name = "Auto Counter (Move One)", key = "toggleCounter1", bind = "X"},
-    {name = "Auto Counter (Move Two)", key = "toggleCounter2", bind = "C"},
-    {name = "Auto Counter (Move Three)", key = "toggleCounter3", bind = "V"},
-    {name = "Auto Counter (Move Four)", key = "toggleCounter4", bind = "N"},
-    {name = "Auto Counter (Move Five)", key = "toggleCounter5", bind = "M"},
-    {name = "T Special", key = "toggleTSpecial", bind = "L"},
-}
-
-local function updcounterui()
-    if not autoSkillState.showActiveCounters then return end
-    for i = 1, #statusLabels do
-        statusLabels[i]:Destroy()
-    end
-    statusLabels = {}
-    for i = 1, #counters do
-        local c = counters[i]
-        local enabled = autoSkillState[c.key]
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1, 0, 0, 28)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = c.name .. " [" .. c.bind .. "]"
-        lbl.TextColor3 = enabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 80, 80)
-        lbl.TextXAlignment = Enum.TextXAlignment.Center
-        lbl.Font = Enum.Font.GothamSemibold
-        lbl.TextScaled = true
-        lbl.Parent = statusFrame
-        statusLabels[#statusLabels + 1] = lbl
-    end
-end
-
+local buffer = buffer or { fromstring = function(str) return str end }
 local connections = {}
-local byteNetReliable = ReplicatedStorage:WaitForChild("ByteNetReliable")
+local byteNetReliable = NET
 
 local function hasball()
     return localplayer.Character and localplayer.Character:FindFirstChild("Ball") ~= nil
@@ -1155,7 +1237,7 @@ end
 
 local toggleKeys = {"toggleCounter1", "toggleCounter2", "toggleCounter3", "toggleCounter4", "toggleCounter5"}
 
-local function montackleanim(animator, targetPlayer)
+function montackleanim(animator, targetPlayer)
     if connections[targetPlayer] and connections[targetPlayer].animLoop then
         connections[targetPlayer].animLoop:Disconnect()
     end
@@ -1185,7 +1267,7 @@ local function montackleanim(animator, targetPlayer)
                 return
             end
             if now - lastFire < autoSkillState.fireRate then return end
-
+            
             lastFire = now
 
             local myChar = localplayer.Character
@@ -1221,7 +1303,7 @@ local function montackleanim(animator, targetPlayer)
     connections[targetPlayer].animatorConn = animConnection
 end
 
-local function setupPlayer(plr)
+function setupPlayer(plr)
     if plr == localplayer then return end
 
     local function onCharAdded(char)
@@ -1258,7 +1340,7 @@ Players.PlayerRemoving:Connect(function(plr)
     end
 end)
 
-local function createAutoCounter(label, toggleKey)
+function createAutoCounter(label, toggleKey)
     autodrib:Toggle(label, function()
         if autoSkillState.keybindsEnabled then
             notify2("calm error", "hey! dont try using gui toggles if u got keybinds on!!! 😡", 3)
@@ -1270,9 +1352,23 @@ local function createAutoCounter(label, toggleKey)
     end)
 end
 
+exploittab:Button("Auto Counter Info", "This Comes With Instructions On How To Use The Feature Below.", function()
+    local StarterGui = game:GetService("StarterGui")
+
+    StarterGui:SetCore("SendNotification", {
+        Title = "Auto Counter Info",
+        Text = "Dribble: Z, T-Special: L.",
+        Duration = 10
+    }) task.wait(0.5)
+    StarterGui:SetCore("SendNotification", {
+        Title = "Auto Counter Info",
+        Text = "C Stands For Counter, C1: X, C2: C, C3: V, C4: N, C5: M.",
+        Duration = 10
+    })
+end)
+
 autodrib:Toggle("Show Active Auto Counters", "Shows Your Currently Toggled Auto Counters.", function()
     autoSkillState.showActiveCounters = not autoSkillState.showActiveCounters
-    statusFrame.Visible = autoSkillState.showActiveCounters
     notify2("Status GUI", autoSkillState.showActiveCounters and "Enabled." or "Disabled.", 3)
     updcounterui()
 end)
@@ -1323,9 +1419,7 @@ if not autoSkillState.keybindSetup then
     end)
 end
 
-updcounterui()
-
-local autogoal = maintab:Folder("Auto Goal Features.", Color3.fromRGB(24, 255, 228), true)
+autogoal = maintab:Folder("Auto Goal Features.", Color3.fromRGB(169, 5, 255), true)
 autogoal:Label("Auto Goal: Automatically Does Auto Goal Steps Instantly, Use In 5v5.")
 
 autogoal:Button("Isagi U-20 Goal", "Attempts To Do Isagi's U-20 Auto Goal By Teleporting To The Designated Area.", function()
@@ -1339,7 +1433,7 @@ autogoal:Button("Isagi U-20 Goal", "Attempts To Do Isagi's U-20 Auto Goal By Tel
             hrp.CFrame = CFrame.new(-537, 3, 1549)
         end
         task.wait(0.2)
-        ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(
+        NET:FireServer(
             buffer.fromstring(buffers["base"]),
             { { "skill3"} }
         )
@@ -1361,7 +1455,7 @@ autogoal:Button("Nagi Dream Goal", "Attempts To Do Nagi's Control Move Auto Goal
             plr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
         end
         task.wait(0.2)
-        ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(
+        NET:FireServer(
             buffer.fromstring(buffers["base"]),
             { { "skill2", true } }
         )
@@ -1434,7 +1528,7 @@ autogoal:Button("Barou Devour Goal", "Attempts To Do Barou's Devour Auto Goal By
     end
 end)
 
-local add = maintab:Folder("Fun Features.", Color3.fromRGB(24, 255, 228), true)
+local add = maintab:Folder("Fun Features.", Color3.fromRGB(169, 5, 255), true)
 add:Label("Fun Features: Pretty Fun Features I'd Say.")
 
 local AnimationId = "rbxassetid://113098409724280"
@@ -1447,9 +1541,20 @@ local invisState = {
     animationTrack = nil
 }
 
+local function stopInvisibility()
+    if invisState.animationTrack then
+        invisState.animationTrack:Stop()
+        invisState.animationTrack:Destroy()
+        invisState.animationTrack = nil
+    end
+    if invisState.humanoid then
+        invisState.humanoid.CameraOffset = Vector3.new(0, 0, 0)
+    end
+end
+
 local function startInvisibility()
+    stopInvisibility()
     if not invisState.humanoid then return end
-    invisState.active = true
 
     local anim = Instance.new("Animation")
     anim.AnimationId = AnimationId
@@ -1461,15 +1566,13 @@ local function startInvisibility()
     invisState.animationTrack = track
 end
 
-local function stopInvisibility()
-    invisState.active = false
-    if invisState.animationTrack then
-        invisState.animationTrack:Stop()
-        invisState.animationTrack:Destroy()
-        invisState.animationTrack = nil
-    end
-    if invisState.humanoid then
-        invisState.humanoid.CameraOffset = Vector3.new(0, 0, 0)
+local function setupCharacter(char)
+    invisState.character = char
+    invisState.humanoid = char:WaitForChild("Humanoid", 5)
+    
+    if invisState.active then
+        task.wait(0.1)
+        startInvisibility()
     end
 end
 
@@ -1491,21 +1594,14 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-player.CharacterAdded:Connect(function(char)
-    invisState.character = char
-    invisState.humanoid = char:WaitForChild("Humanoid")
-
-    if invisState.active then
-        startInvisibility()
-    end
-end)
+player.CharacterAdded:Connect(setupCharacter)
 
 if player.Character then
-    invisState.character = player.Character
-    invisState.humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    setupCharacter(player.Character)
 end
 
 add:Toggle("Invisibility V1 (Method: Animation)", "Makes You Almost Fully Invisible To Other Players Using An Animation.", function(v)
+    invisState.active = v
     if v then
         startInvisibility()
     else
@@ -1684,7 +1780,7 @@ add:Button("Invisibility V2 (Method: Clone)", "Makes You Almost Fully Invisible 
     end)
 end)
 
-local passingState = {
+passingState = {
     InfiniteRangePassing = false,
     busy = false
 }
@@ -1692,7 +1788,7 @@ local passingState = {
 local plr = Players.LocalPlayer
 local mouse = plr:GetMouse()
 local Camera = workspace.CurrentCamera
-local passpass = ReplicatedStorage:WaitForChild("ByteNetReliable")
+local passpass = NET
 
 local keyToSkill = {
     [Enum.KeyCode.One]   = "skill1",
@@ -1922,72 +2018,11 @@ add:Button("Goalkeeper Anywhere (Rejoin To Disable.)", "Allows You To Do GK Side
     end)
 end)
 
-local kickrealhard = false
-
-add:Toggle("Kick Like Kaiser", "Makes You Kick Like Kaiser!1!11!", function(state)
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Kick Like Kaiser",
-        Text = "If Your Kicks Are Not Max Power While On, It Means Your Executor Does Not Support This Feature.",
-        Duration = 10,
-        Button1 = "ok my executor is fine",
-        Button2 = "aw man my executor sucks"
-    })
-    
-    kickrealhard = state
-    
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local ByteNetReliable = ReplicatedStorage:WaitForChild("ByteNetReliable")
-    local rawMeta = getrawmetatable(game)
-    
-    if not getgenv().kickhookk then
-        getgenv().kickhookk = true
-        
-        local oldIndex = rawMeta.__index
-        local oldNamecall = rawMeta.__namecall
-        setreadonly(rawMeta, false)
-
-        function modKick(args)
-            if not kickrealhard then return end
-            if type(args) == "table" and type(args[2]) == "table" then
-                for _, subTable in pairs(args[2]) do
-                    if type(subTable) == "table" and subTable[1] == "kick" then
-                        subTable[2] = 100
-                    end
-                end
-            end
-        end
-
-        rawMeta.__index = newcclosure(function(self, key)
-            if self == ByteNetReliable and (key == "FireServer" or key == "fireServer") then
-                return newcclosure(function(remote, ...)
-                    local args = {...}
-                    modKick(args)
-                    return oldIndex(remote, key)(remote, unpack(args))
-                end)
-            end
-            return oldIndex(self, key)
-        end)
-
-        rawMeta.__namecall = newcclosure(function(self, ...)
-            local args = {...}
-            local method = getnamecallmethod()
-            if self == ByteNetReliable and (method == "FireServer" or method == "fireServer") then
-                modKick(args)
-                return oldNamecall(self, unpack(args))
-            end
-            return oldNamecall(self, ...)
-        end)
-
-        setreadonly(rawMeta, true)
-    end
-end)
-
 add:Button("Shachoko GK Catch (Req. GK Position.)", "Makes It Almost Impossible To Be Scored On As GK And Does Shachoko Kick.", function()
 loadstring(game:HttpGet("https://pastebin.com/raw/Hr1HnK38"))()
 end)
 
-local oth = maintab:Folder("Other Blatant Features.", Color3.fromRGB(24, 255, 228), true)
+local oth = maintab:Folder("Other Blatant Features.", Color3.fromRGB(169, 5, 255), true)
 oth:Label("Other Blatant Features: It's In The Name.")
 
 local blatantState = {
@@ -2036,6 +2071,8 @@ local function applyNoStun()
     local h = c:FindFirstChild("Humanoid")
     if h then
         h.WalkSpeed = 40
+        h.JumpPower = 50
+        h:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
     end
 end
 
@@ -2110,7 +2147,7 @@ oth:Toggle("Spam Brick Sound (5v5 + GK Only.)", "This SHOULD Be Self Explanatory
                             }
                         }
                     }
-                    game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(unpack(args))
+                    NET:FireServer(unpack(args))
 
                     task.wait(0.05)
                 end
@@ -2136,7 +2173,7 @@ if not workspace:FindFirstChild("ddddegrdgdhgrgtedrhgdrtg") then
     p.Parent = workspace
 end
 
-local murder = maintab:Folder("''This Isn't Soccer Anymore''! Features.", Color3.fromRGB(24, 255, 228), true)
+murder = maintab:Folder("''This Isn't Soccer Anymore''! Features.", Color3.fromRGB(169, 5, 255), true)
 murder:Label("Evil Features: You Are Killing People In A Soccer Match??")
 
 attackmode = "KILL, KILL, KILL!"
@@ -2159,7 +2196,7 @@ murder:Button("Evil Info", "This Comes With Instructions On How To Use The Featu
     })
 end)
 
-local grabz = {
+grabz = {
     "rbxassetid://123994829903056",
     "rbxassetid://73092083880817",
     "rbxassetid://114866946968143",
@@ -2168,7 +2205,7 @@ local grabz = {
 	"rbxassetid://133382731392749"
 }
 
-local function isgrabbing(animTrack)
+function isgrabbing(animTrack)
     if not animTrack.Animation then return false end
     local animId = animTrack.Animation.AnimationId
     for _, id in ipairs(grabz) do
@@ -2179,7 +2216,7 @@ local function isgrabbing(animTrack)
     return false
 end
 
-local function killthemNOW()
+function killthemNOW()
     if connection then
         connection:Disconnect()
         connection = nil
@@ -2279,7 +2316,7 @@ if game:GetService("Players").LocalPlayer.Character then
     killthemNOW()
 end
 
-local th = maintab:Folder("Trap Helper.", Color3.fromRGB(24, 255, 228), true)
+local th = maintab:Folder("Trap Helper.", Color3.fromRGB(169, 5, 255), true)
 th:Label("Trap Helper: Automatically Moves Toward Ball During Trap Moves.")
 
 local trapAnims = {
@@ -2472,7 +2509,7 @@ th:Slider("Trap Helper Speed", 50, 50, 1000, 1, function(v)
     trapSpeed = v
 end)
 
-local d = maintab:Folder("Distance Move Buffs.", Color3.fromRGB(24, 255, 228), true)
+local d = maintab:Folder("Distance Move Buffs.", Color3.fromRGB(169, 5, 255), true)
 d:Label("Distance Move Buffs: Buffs Movement Based Moves.")
 
 local player = Players.LocalPlayer
@@ -3057,7 +3094,7 @@ d:Slider("Shadow Step Distance", 0, 0, 50, 1, function(v)
     Distances.shadowDist = v
 end)
 
-local autoact = maintab2:Folder("Auto Activate Features.", Color3.fromRGB(24, 255, 228), true)
+local autoact = maintab2:Folder("Auto Activate Features.", Color3.fromRGB(169, 5, 255), true)
 autoact:Label("Auto Activate: Activates The Move When Ball Within Range.")
 
 local autoActivateState = { 
@@ -3169,11 +3206,11 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 { "skill" .. autoActivateState.moveNumber } 
             } 
         } 
-        game.ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(unpack(args)) 
+        NET:FireServer(unpack(args)) 
     end 
 end)
 
-local autoline = maintab2:Folder("Auto Line Up Features.", Color3.fromRGB(24, 255, 228), true)
+local autoline = maintab2:Folder("Auto Line Up Features.", Color3.fromRGB(169, 5, 255), true)
 autoline:Label("Auto Line Ups: Helps You Aim At Certain Areas.")
 
 local Players = game:GetService("Players")
@@ -3307,7 +3344,7 @@ local function resetLineupPhysics()
     if lineupLockActive then
         lineupLockActive = false
         if currentLineupMode == "Freeze" then
-            if hrp then hrp.Anchored = false end
+            if hrp then humanoid.WalkSpeed = 0 end
         elseif currentLineupMode == "Slowness" then
             if humanoid then humanoid.WalkSpeed = 30 end
         end
@@ -3317,7 +3354,7 @@ end
 local function applyLineupMode()
     lineupLockActive = true
     if currentLineupMode == "Freeze" then
-        if hrp then hrp.Anchored = true end
+        if hrp then humanoid.WalkSpeed = 0 end
     elseif currentLineupMode == "Slowness" then
         if humanoid then humanoid.WalkSpeed = 5 end
     end
@@ -3325,7 +3362,21 @@ end
 
 if isMobile then
     RunService.RenderStepped:Connect(function()
-        if not hrp then return end
+        if not hrp or not character then return end
+        
+        local hasBall = false
+        for _, child in ipairs(character:GetChildren()) do
+            if child:IsA("MeshPart") and child.Name:lower():match("ball") then
+                hasBall = true
+                break
+            end
+        end
+
+        if not hasBall then
+            if activeTarget then stopCamLock() end
+            return
+        end
+
         local padIndex = getPadUnderPlayer()
         if padIndex then
             local targetPart = Workspace:FindFirstChild("target" .. padIndex)
@@ -3898,7 +3949,7 @@ autoline:Toggle("Rin Flow Line Ups", "Rin's Kill Shot Line Ups.", function(k)
 	end
 end)
 
-local linecreator = maintab2:Folder("Line Up Creator Features.", Color3.fromRGB(24, 255, 228), true)
+local linecreator = maintab2:Folder("Line Up Creator Features.", Color3.fromRGB(169, 5, 255), true)
 linecreator:Label("Line Up Creator: Create Your Own Lineups!")
 
 linecreator:Button("Copy Lineup Code", "Click To Log A Lineup At The Current Position & Target.", function()
@@ -4071,7 +4122,7 @@ linecreator:Textbox("Enter Lineup Code(s)", "Enter Lineup Codes (seperated by co
     })
 end)
 
-local autopos = maintab2:Folder("Auto Position Features.", Color3.fromRGB(24, 255, 228), true)
+local autopos = maintab2:Folder("Auto Position Features.", Color3.fromRGB(169, 5, 255), true)
 autopos:Label("Auto Position: Automatically Sets Certain Positions.")
 
 local autoPositionState = {
@@ -4093,21 +4144,24 @@ local function firePacketsIfNear()
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
+
     if (root.Position - Vector3.new(-371, 13, -1599)).Magnitude <= 15 or
        (root.Position - Vector3.new(-196, 13, -1599)).Magnitude <= 15 then
-        game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000A"))
-        game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000B"))
+
+        local P = require(game:GetService("ReplicatedStorage"):WaitForChild("packets"))
+
+
+        pcall(function() P.bytenet_selectRole.send({index = 1, t = "A"}) end)
+        pcall(function() P.bytenet_selectRole.send({index = 1, t = "B"}) end)
     end
 end
 
 local function fireGKPackets()
-    local char = game:GetService("Players").LocalPlayer.Character
-    if not char then return end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    local P = require(game:GetService("ReplicatedStorage"):WaitForChild("packets"))
 
-    game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\005\001\000B"))
-    game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\005\001\000A"))
+
+    pcall(function() P.bytenet_selectRole.send({index = 5, t = "A"}) end)
+    pcall(function() P.bytenet_selectRole.send({index = 5, t = "B"}) end)
 end
 
 autopos:Toggle("Auto Pick CF", "Automatically Picks Center Field Position On Respawn Or Enable.", function()
@@ -4164,10 +4218,53 @@ autopos:Toggle("Auto Pick GK", "Automatically Picks Goalkeeper Position On Respa
     end
 end)
 
-local autogk = maintab2:Folder("Auto Goalkeeper Features.", Color3.fromRGB(24, 255, 228), true)
+local autogk = maintab2:Folder("Auto Goalkeeper Features.", Color3.fromRGB(169, 5, 255), true)
 autogk:Label("Auto Goalkeeper: Automatically Plays As GK For You.")
 
-autogk:Button("Celeron's Auto GK Enhanced", "Click V To Toggle, Reset To Disable.", function()
+local gkSettings = {
+    enhancedRange = 35,
+    enhancedToggleKey = Enum.KeyCode.V,
+    daffyRange = 60,
+    daffyDisableKey = Enum.KeyCode.F4
+}
+
+local function setGKKey(setting, text, label)
+    if typeof(text) ~= "string" then return end
+    local requested = text:gsub("%s+", ""):lower()
+    local selected = nil
+    for _, keyCode in ipairs(Enum.KeyCode:GetEnumItems()) do
+        if keyCode.Name:lower() == requested and keyCode ~= Enum.KeyCode.Unknown then
+            selected = keyCode
+            break
+        end
+    end
+
+    if selected then
+        gkSettings[setting] = selected
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = label,
+            Text = "Keybind set to " .. selected.Name .. ".",
+            Duration = 3
+        })
+    else
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = label,
+            Text = "Invalid key. Previous keybind kept.",
+            Duration = 3
+        })
+    end
+end
+
+autogk:Label("Celeron's Auto GK Settings.")
+autogk:Slider("Celeron GK Tackle Range", 35, 5, 120, 1, function(v)
+    gkSettings.enhancedRange = v
+end)
+
+autogk:Textbox("Celeron GK Toggle Key", "Enter Key (Default: V.)", function(text)
+    setGKKey("enhancedToggleKey", text, "Celeron GK Toggle")
+end)
+
+autogk:Button("Celeron's Auto GK Enhanced", "Use Configured Key To Toggle (Default V), Reset To Disable.", function()
 task.spawn(function()
     local Players = game:GetService("Players")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -4196,7 +4293,7 @@ task.spawn(function()
         look = nil,
         ballHolder = ReplicatedStorage.workspace.ballHolder,
         lastHolder = nil,
-        remote = ReplicatedStorage:WaitForChild("ByteNetReliable"),
+        remote = NET,
         map = Workspace:WaitForChild("map"),
         GRAVITY = Vector3.new(0, -Workspace.Gravity, 0),
         velSmooth = Vector3.zero,
@@ -4204,7 +4301,7 @@ task.spawn(function()
         tackleArgs = {buffer.fromstring(buffers.base), {{"tackle"}}},
         emptyBuffer = buffer.fromstring(buffers["grabball"]),
         magnetBurstActive = false,
-        tackle_radius = 35,
+        tackle_radius = gkSettings.enhancedRange,
         terrain = Workspace.Terrain,
         renderConn = nil,
         inputConn = nil,
@@ -4280,6 +4377,7 @@ task.spawn(function()
     end
 
     gkState.renderConn = RunService.RenderStepped:Connect(function(dt)
+        gkState.tackle_radius = gkSettings.enhancedRange
         if not gkState.enabled or gkState.pause or plr.Team == game.Teams.lobby then
             gkState.look.Enabled = false
             return
@@ -4317,7 +4415,7 @@ task.spawn(function()
             gkState.look.Enabled = true
             gkState.look.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(predicted.X, hrp.Position.Y, predicted.Z))
             local dist = (hrp.Position - ball.Position).Magnitude
-            if dist > gkState.tackle_radius and dist <= 37 and ball.Position.Y > hrp.Position.Y + 4 then
+            if dist > gkState.tackle_radius and dist <= gkState.tackle_radius + 2 and ball.Position.Y > hrp.Position.Y + 4 then
                 hum.Jump = true
             end
             if dist <= gkState.tackle_radius then
@@ -4341,7 +4439,7 @@ task.spawn(function()
 
     gkState.inputConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        if input.KeyCode == Enum.KeyCode.V then
+        if input.KeyCode == gkSettings.enhancedToggleKey then
             gkState.enabled = not gkState.enabled
             updateindicator()
             if not gkState.enabled then
@@ -4357,7 +4455,16 @@ task.spawn(function()
 end)
 end)
 
-autogk:Button("Daffy's Auto GK", "Reset Or Click F4 To Disable.", function()
+autogk:Label("Daffy's Auto GK Settings.")
+autogk:Slider("Daffy GK Tackle Range", 60, 5, 150, 1, function(v)
+    gkSettings.daffyRange = v
+end)
+
+autogk:Textbox("Daffy GK Disable Key", "Enter Key (Default: F4.)", function(text)
+    setGKKey("daffyDisableKey", text, "Daffy GK Disable")
+end)
+
+autogk:Button("Daffy's Auto GK", "Reset Or Use Configured Key To Disable (Default F4).", function()
     local gkPlayerState = {
         plr = Players.LocalPlayer,
         char = nil,
@@ -4452,7 +4559,7 @@ autogk:Button("Daffy's Auto GK", "Reset Or Click F4 To Disable.", function()
         gkPlayerState.lastHolder = cur
     end)
 
-    gkPlayerState.remote = ReplicatedStorage:WaitForChild("ByteNetReliable")
+    gkPlayerState.remote = NET
 
     local function cleanup()
         gkPlayerState.onn = false
@@ -4495,7 +4602,7 @@ autogk:Button("Daffy's Auto GK", "Reset Or Click F4 To Disable.", function()
         end
 
         local dist = (gkPlayerState.hrp.Position - ball.Position).Magnitude
-        if dist <= 60 then
+        if dist <= gkSettings.daffyRange then
             if ball.Position.Y >= gkPlayerState.hrp.Position.Y + 6 then
                 gkPlayerState.hum.Jump = true
             else
@@ -4513,7 +4620,7 @@ autogk:Button("Daffy's Auto GK", "Reset Or Click F4 To Disable.", function()
 
     gkPlayerState.kill = UserInputService.InputBegan:Connect(function(input, gp)
         if gp then return end
-        if input.KeyCode == Enum.KeyCode.F4 then
+        if input.KeyCode == gkSettings.daffyDisableKey then
             cleanup()
             gkPlayerState.kill:Disconnect()
             gkPlayerState.con:Disconnect()
@@ -4526,7 +4633,7 @@ autogk:Button("Daffy's Auto GK", "Reset Or Click F4 To Disable.", function()
     gkPlayerState.con:Disconnect()
 end)
 
-local airdr = maintab2:Folder("Air Dribble Features.", Color3.fromRGB(24, 255, 228), true)
+local airdr = maintab2:Folder("Air Dribble Features.", Color3.fromRGB(169, 5, 255), true)
 airdr:Label("Air Dribble: Dribbles The Ball Through The Air.")
 
 local bindKey = Enum.KeyCode.LeftAlt
@@ -4597,7 +4704,7 @@ local function performAirDribble()
     local dir = root.CFrame.LookVector
     local kickVec = Vector3.new(dir.X * 0.75, 0.65, dir.Z * 0.75)
 
-    ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(buffers["base"]), {
+    NET:FireServer(buffer.fromstring(buffers["base"]), {
         { "kick", 28, false, kickVec }
     })
 end
@@ -4631,7 +4738,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
-local othersil = maintab2:Folder("Other Features.", Color3.fromRGB(24, 255, 228), true)
+local othersil = maintab2:Folder("Other Features.", Color3.fromRGB(169, 5, 255), true)
 othersil:Label("Other Features: Self Explanatory, Other Silent Features.")
 
 local qteState = {
@@ -4790,7 +4897,7 @@ othersil:Toggle("Auto Steal Ball", "Automatically Attempts To Steal When Opponen
     RunService = game:GetService("RunService") 
     lp = Players.LocalPlayer 
     state.enabled = v 
-    animId = "rbxassetid://76587445975710" 
+    animId = "rbxassetid://87049473772388" 
     
     function getHRP(char) 
         return char and char:FindFirstChild("HumanoidRootPart") 
@@ -4801,7 +4908,7 @@ othersil:Toggle("Auto Steal Ball", "Automatically Attempts To Steal When Opponen
         hrp = getHRP(char) 
         if not hrp or not targetHRP then return end 
         
-        if (hrp.Position - targetHRP.Position).Magnitude > 20 then return end
+        if (hrp.Position - targetHRP.Position).Magnitude > 30 then return end
         
         start = tick() 
         conn = RunService.RenderStepped:Connect(function() 
@@ -4815,7 +4922,7 @@ othersil:Toggle("Auto Steal Ball", "Automatically Attempts To Steal When Opponen
 
 			local args = {
     			buffer.fromstring(buffers["base"]),{{"tackle"}}}
-			game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(unpack(args)) 
+			NET:FireServer(unpack(args)) 
 
         end) 
     end 
@@ -5067,9 +5174,9 @@ othersil:Toggle("Auto Formless", "Shidou Only Formless Macro.", function()
             local dir = hrp.CFrame.LookVector
             local kickVec = vector.create(dir.X * 0.5, 1, dir.Z * 0.5)
 
-            local remote = game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable")
+            local remote = NET
             remote:FireServer(buffer.fromstring(buffers["base"]), { { "kick", 25, false, kickVec } })
-            game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(
+            NET:FireServer(
                 buffer.fromstring(buffers["base"]), { { "skill1" } }
             )
         end)
@@ -5097,7 +5204,7 @@ othersil:Textbox("Formless Keybind", "Enter Key (Example: Y, V, L.)", function(t
     end
 end)
 
-local mobile = maintab2:Folder("Mobile Silent Features.", Color3.fromRGB(24, 255, 228), true)
+local mobile = maintab2:Folder("Mobile Silent Features.", Color3.fromRGB(169, 5, 255), true)
 mobile:Label("Mobile Silent Features: Silent Features Ported To Mobile.")
 
 local mobform = {
@@ -5146,8 +5253,8 @@ local function trigger()
     local dir = hrp.CFrame.LookVector
     local kickVec = Vector3.new(dir.X * 0.5, 1, dir.Z * 0.5)
 
-    game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(buffers["base"]), { { "kick", 25, false, kickVec } })
-    game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(buffers["base"]), { { "skill1" } })
+    NET:FireServer(buffer.fromstring(buffers["base"]), { { "kick", 25, false, kickVec } })
+    NET:FireServer(buffer.fromstring(buffers["base"]), { { "skill1" } })
 end
 
 local function makeDraggable(frame)
@@ -5257,7 +5364,7 @@ local function trigger()
     local dir = hrp.CFrame.LookVector
     local kickVec = Vector3.new(dir.X * 0.75, 0.65, dir.Z * 0.75)
 
-    game:GetService("ReplicatedStorage"):WaitForChild("ByteNetReliable"):FireServer(
+    NET:FireServer(
         buffer.fromstring(buffers["base"]),
         { { "kick", 28, false, kickVec } }
     )
@@ -5334,7 +5441,7 @@ mobile:Button("Air Dribble (Mobile Button)", "Click Again To Remove Button.", fu
     if airDribble.active then show() else hide() end
 end)
 
-mobilessss = maintab2:Folder("Mobile Simulation Features.", Color3.fromRGB(24, 255, 228), true)
+mobilessss = maintab2:Folder("Mobile Simulation Features.", Color3.fromRGB(169, 5, 255), true)
 
 getgenv().MobileKeySystem = getgenv().MobileKeySystem or {
     key = "",
@@ -5575,31 +5682,13 @@ end)
 
 misctab:Toggle("Enable All Dubs / Voicelines", "Enables Dub Voicelines For All Styles.", function(sts)
     local lp = game:GetService("Players").LocalPlayer
-    local setting = lp.setting
+    local setting = lp:FindFirstChild("setting")
 
-    local dubs = {
-        setting.dub_yukimiya,
-        setting.dubVoicelines,
-        setting.britishaikuevil,
-        setting.dub_barou,
-        setting.dub_chigiri,
-        setting.dub_donlorenzo,
-        setting.dub_gagamaru,
-        setting.dub_isagi,
-        setting.dub_kaiser,
-        setting.dub_karasu,
-        setting.dub_kunigami,
-        setting.dub_masterylorenzo,
-        setting.dub_nagi,
-        setting.dub_otoya,
-        setting.dub_rin,
-        setting.dub_sae,
-        setting.dub_what,
-    }
-
-    for _, dub in ipairs(dubs) do
-        if dub then
-            dub.Value = sts
+    if setting then
+        for _, child in ipairs(setting:GetChildren()) do
+            if string.sub(string.lower(child.Name), 1, 3) == "dub" then
+                child.Value = sts
+            end
         end
     end
 
@@ -5941,39 +6030,6 @@ function checkScoreCondition()
     return false
 end
 
-function firePacketsIfNearGoal()
-    local char = GoalLocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    if (root.Position - Vector3.new(-371, 13, -1599)).Magnitude <= 15 or
-       (root.Position - Vector3.new(-196, 13, -1599)).Magnitude <= 15 then
-        
-        if farmmode == "Solo Farm" then
-            if teamSwitching then return end
-            
-            if checkScoreCondition() then
-                teamSwitching = true
-                lastResetTime = os.clock()
-                task.spawn(function()
-                    if char then
-                        char:BreakJoints()
-                    end
-                    task.wait(8)
-                    lastFiredTeam = (lastFiredTeam == "A") and "B" or "A"
-                    ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000" .. lastFiredTeam))
-                    teamSwitching = false
-                end)
-                return
-            end
-            
-            ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000" .. lastFiredTeam))
-        else
-            ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000A"))
-            ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000B"))
-        end
-    end
-end
-
 function IsInGame()
     local char = GoalLocalPlayer.Character
     local state = char and char:FindFirstChild("state")
@@ -6013,7 +6069,7 @@ function StealBall()
             if oBall and oRoot and root then
                 task.wait(0.5)
                 root.CFrame = oBall.CFrame
-                ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(unpack({buffer.fromstring(buffers["base"]), {{"tackle"}}}))
+                NET:FireServer(unpack({buffer.fromstring(buffers["base"]), {{"tackle"}}}))
             end
         end
     end
@@ -6065,6 +6121,19 @@ exploittab:Button("Goal Farm Info", "This Comes With Instructions On How To Use 
     })
 end)
 
+local currentTrackedTeam = nil
+
+local function fireOppositeTeamPacket(cachedTeam)
+    local P = require(game:GetService("ReplicatedStorage"):WaitForChild("packets"))
+    local teamToUse = cachedTeam or currentTrackedTeam or (GoalLocalPlayer.Team and GoalLocalPlayer.Team.Name) or "A"
+    local nextTeam = (teamToUse == "A") and "B" or "A"
+    
+    pcall(function() 
+        P.bytenet_selectRole.send({index = 1, t = nextTeam}) 
+    end)
+    currentTrackedTeam = nextTeam
+end
+
 exploittab:Toggle("Goal Farm", "Automatically Farms Goals For You.", function()
     goalFarmState.Enabled = not goalFarmState.Enabled
     
@@ -6075,29 +6144,35 @@ exploittab:Toggle("Goal Farm", "Automatically Farms Goals For You.", function()
     })
     
     if goalFarmState.Enabled then
+        if GoalLocalPlayer.Team then
+            currentTrackedTeam = GoalLocalPlayer.Team.Name
+        end
+
         goalFarmState.CFConn = GoalLocalPlayer.CharacterAdded:Connect(function()
             task.wait(1)
-            if goalFarmState.Enabled then 
-                firePacketsIfNearGoal() 
+            if goalFarmState.Enabled and not teamSwitching then 
+                firePacketsIfNear() 
             end
         end)
         
         task.spawn(function()
             repeat task.wait() until GoalLocalPlayer.Character and GoalLocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if goalFarmState.Enabled then 
-                firePacketsIfNearGoal() 
+            if goalFarmState.Enabled and not teamSwitching then 
+                firePacketsIfNear() 
             end
         end)
         
         goalFarmState.RenderConn = RunService.RenderStepped:Connect(function()
             if not goalFarmState.Enabled then return end
             pcall(function()
-                if farmmode == "Solo Farm" and (teamSwitching or checkScoreCondition()) then
+                local conditionMet = checkScoreCondition()
+                if farmmode == "Solo Farm" and (teamSwitching or conditionMet) then
                     if not teamSwitching then
                         teamSwitching = true
                         lastResetTime = os.clock()
                         
                         task.spawn(function()
+                            local teamBeforeReset = GoalLocalPlayer.Team and GoalLocalPlayer.Team.Name or currentTrackedTeam or "A"
                             local char = GoalLocalPlayer.Character
                             local hum = char and char:FindFirstChildOfClass("Humanoid")
                             if hum then
@@ -6106,23 +6181,19 @@ exploittab:Toggle("Goal Farm", "Automatically Farms Goals For You.", function()
                             
                             task.wait(8)
                             
-                            if lastFiredTeam == nil then
-                                ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000A"))
-                                task.wait(0.1)
-                                ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000B"))
-                                
-                                task.wait(0.1)
-                                
-                                if GoalLocalPlayer.Team then
-                                    lastFiredTeam = GoalLocalPlayer.Team.Name
-                                else
-                                    lastFiredTeam = "B"
+                            local timeout = 0
+                            while timeout < 30 do
+                                if GoalLocalPlayer.Character and GoalLocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                                    break
                                 end
-                            else
-                                lastFiredTeam = (lastFiredTeam == "A") and "B" or "A"
-                                ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(buffer.fromstring(pick .. "\001\001\000" .. lastFiredTeam))
+                                task.wait(0.1)
+                                timeout = timeout + 1
                             end
                             
+                            task.wait(0.5)
+                            fireOppositeTeamPacket(teamBeforeReset)
+                            
+                            task.wait(0.2)
                             teamSwitching = false
                         end)
                     end
@@ -6143,9 +6214,11 @@ exploittab:Toggle("Goal Farm", "Automatically Farms Goals For You.", function()
                         root.CFrame = targetGoal.CFrame
                         
                         task.wait(0.175)
-                        ReplicatedStorage:WaitForChild("ByteNetReliable"):FireServer(unpack({buffer.fromstring(buffers["base"]), {{"kick", 50, false, vector.create(0, 1, 0)}}}))
+                        NET:FireServer("base", {{"kick", 50, false, vector.create(0, 1, 0)}})
                         
-                        firePacketsIfNearGoal()
+                        if not teamSwitching then
+                            firePacketsIfNear()
+                        end
                     end
                 end
             end)
@@ -6156,6 +6229,7 @@ exploittab:Toggle("Goal Farm", "Automatically Farms Goals For You.", function()
         stopGoalFarm()
     end
 end)
+
 
 exploittab:Textbox("Goal Target", "Enter A Number Of Goals To Stop Farming At.", function(v)
     local num = tonumber(v)
