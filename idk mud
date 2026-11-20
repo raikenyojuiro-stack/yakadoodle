@@ -6660,6 +6660,1090 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
+-- BEGIN: Shooting Assistance (transferred from the Markdown Azure Latch version)
+do
+    local function installShootingAssistance()
+local shotfeats = maintab2:Folder("Shooting Assistance Based Features.", Color3.fromRGB(169, 5, 255), true)
+shotfeats:Label("Shooting Assistance Based Features.: Assists With Shooting Moves.")
+
+local run_service = game:GetService("RunService")
+local player = game:GetService("Players").LocalPlayer
+local starter_gui = game:GetService("StarterGui")
+pcall(function() run_service:UnbindFromRenderStep("shot_predictor") end)
+for _, name in ipairs({"clear_trajectory_lines", "ClearTrajectoryLines"}) do
+	if _G[name] then pcall(_G[name]) end
+end
+for _, child in ipairs(workspace:GetChildren()) do
+	if child.Name == "DecodedTrajectories" or child.Name == "TrajectoryRings" then child:Destroy() end
+end
+
+st_mode = "follow"
+st_linethickness = 0.2
+st_styleconfig = {
+	sae = {length = 135, mindist = 125, maxdist = 135, maxentry = 75, skill = "skill3", aiminset = 0.25, aimdrop = 0.75},
+	kaiser = {length = 160, mindist = 145, maxdist = 160, maxentry = 95, skill = "skill2", aiminset = 0.25, aimdrop = 0.5},
+	yukimiya = {length = 185, mindist = 175, maxdist = 185, maxentry = 50, skill = "skill1", aiminset = 0.5, aimdrop = 1},
+	rin = {length = 180, mindist = 164, maxdist = 182, maxentry = 75, skill = "skill3", aiminset = 4, aimdrop = 4},
+	karasu = {length = 125, mindist = 115, maxdist = 125, maxentry = 100, skill = "skill3", aiminset = 1, aimdrop = -6},
+}
+st_defaultconfig = {length = 60, mindist = 0, maxdist = 200, maxentry = 75}
+st_currentconfig = st_defaultconfig
+st_currentlinelength = 60
+st_pitchoffset = 3
+st_linecolors = {Color3.fromRGB(255,170,0), Color3.fromRGB(0,200,255), Color3.fromRGB(255,80,200)}
+st_autotop = false
+st_snapdist = 100
+st_requirefacing = false
+st_cornerinset = 1.5
+st_aiminset = 4
+st_aimdrop = 4
+st_locktol = 6
+st_requirereach = true
+st_wallsize = 5
+st_wallstart = 6
+st_wallend = 6
+st_wallstep = 2
+st_slowfactor = 0
+st_slowcooldown = 3
+st_hidemarkers = true
+st_autofire = true
+st_showrings = true
+st_ringthickness = 1.2
+st_ringheight = 0.5
+st_ringcolor = Color3.fromRGB(255, 255, 255)
+st_ringtransparency = 0.75
+st_firecooldown = 3
+st_firecount = 10
+st_fireduration = 1
+st_freeze = true
+st_goals = nil
+st_goalnames = {"goal"}
+st_goalexclude = {"keeper", "gk", "barri", "zone", "area", "line", "sign", "box"}
+st_goalminwidth = 10
+
+st_autotop_blacklist = {
+	rin = true,
+	yukimiya = true,
+}
+
+local user_input_service = game:GetService("UserInputService")
+st_autotop_held = false
+st_autotop_bind = Enum.UserInputType.MouseButton2
+st_bind_aliases = {
+	["0"] = "Zero", ["1"] = "One", ["2"] = "Two", ["3"] = "Three", ["4"] = "Four",
+	["5"] = "Five", ["6"] = "Six", ["7"] = "Seven", ["8"] = "Eight", ["9"] = "Nine",
+	ctrl = "LeftControl", lctrl = "LeftControl", rctrl = "RightControl", control = "LeftControl",
+	shift = "LeftShift", lshift = "LeftShift", rshift = "RightShift",
+	alt = "LeftAlt", lalt = "LeftAlt", ralt = "RightAlt",
+	caps = "CapsLock", esc = "Escape", enter = "Return", del = "Delete", ins = "Insert",
+	bksp = "Backspace", pgup = "PageUp", pgdn = "PageDown",
+	["-"] = "Minus", ["="] = "Equals", [";"] = "Semicolon", ["'"] = "Quote",
+	[","] = "Comma", ["."] = "Period", ["/"] = "Slash", ["\\"] = "BackSlash",
+	["["] = "LeftBracket", ["]"] = "RightBracket", ["`"] = "Backquote",
+	num0 = "KeypadZero", num1 = "KeypadOne", num2 = "KeypadTwo", num3 = "KeypadThree",
+	num4 = "KeypadFour", num5 = "KeypadFive", num6 = "KeypadSix", num7 = "KeypadSeven",
+	num8 = "KeypadEight", num9 = "KeypadNine",
+	mouse1 = "MouseButton1", m1 = "MouseButton1",
+	mouse2 = "MouseButton2", m2 = "MouseButton2",
+	mouse3 = "MouseButton3", m3 = "MouseButton3",
+}
+
+function st_set_autotop_bind(text)
+	text = tostring(text or ""):match("^%s*(.-)%s*$"):lower()
+	if text == "" or text == "none" or text == "clear" then
+		st_autotop_bind = Enum.UserInputType.MouseButton2
+		starter_gui:SetCore("SendNotification", {
+			Title = "Auto Top Bins Bind",
+			Text = "Bind Reset To M2.",
+			Duration = 2,
+		})
+		return
+	end
+	for _, item in ipairs(Enum.KeyCode:GetEnumItems()) do
+		if item.Name:lower() == text or item.Name == st_bind_aliases[text] then
+			st_autotop_bind = item
+			starter_gui:SetCore("SendNotification", {
+				Title = "Auto Top Bins Bind",
+				Text = "Bind Set To: " .. item.Name .. ".",
+				Duration = 2,
+			})
+			return
+		end
+	end
+	for _, item in ipairs(Enum.UserInputType:GetEnumItems()) do
+		if item.Name:lower() == text or item.Name == st_bind_aliases[text] then
+			st_autotop_bind = item
+			starter_gui:SetCore("SendNotification", {
+				Title = "Auto Top Bins Bind",
+				Text = "Bind Set To: " .. item.Name .. ".",
+				Duration = 2,
+			})
+			return
+		end
+	end
+	starter_gui:SetCore("SendNotification", {
+		Title = "Auto Top Bins Bind",
+		Text = "Invalid Key: '" .. text .. "'. Bind Not Changed.",
+		Duration = 3,
+	})
+end
+
+function st_bind_matches(input)
+	if not st_autotop_bind then return false end
+	if typeof(st_autotop_bind) == "EnumItem" then
+		if st_autotop_bind.EnumType == Enum.KeyCode then
+			return input.KeyCode == st_autotop_bind
+		elseif st_autotop_bind.EnumType == Enum.UserInputType then
+			return input.UserInputType == st_autotop_bind
+		end
+	end
+	return false
+end
+
+st_input_began_conn = user_input_service.InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if st_bind_matches(input) then
+		st_autotop_held = true
+	end
+end)
+
+st_input_ended_conn = user_input_service.InputEnded:Connect(function(input, gpe)
+	if st_bind_matches(input) then
+		st_autotop_held = false
+		st_hold_end()
+		st_slow_stop(false)
+		st_clear_rings()
+		lock_cache = nil
+	end
+end)
+
+st_shotsbystyle = {
+	sae = [=[
+TRJ1|-8000|-54383,301,127243|-1736,-7|44|7qsD2ak83H59BqG_chrCuGvhBhxCmF9hBnoCmDtcr7BsB1VxlCArX5hC5B5Tj9BrDnQztB1DxK1yBvF9J1uBvGpHltB1HnFrwB7JxDplBhCd7oB2DcpiB8CyC7hB6BiEphBK-F7elBuHnbjCgI_ejEqLxb9CkMrakB6MhXWsL5UJoKnbpCwN3SCoJ_RA8IxUVkK7SCqJlRHwIvPB2HtPAyHpOAiHlOAiHtNA0G_IAuEtMAkG_LA-FxKAmFhKAgFvJA2EAAA,
+TRJ1|8000|-41412,301,120644|-1736,-60|44|5v5C2qG08mHzuB-b1X5wB6b9W9wByapV_vBwY9SzqBuUhPpoBiS1MntBsS3LlpBkPzInkB4LzF5f-InD_gB8HvBlgBmGQndkEqCjd0CoExbegGnaV4HxV3B6H5WpDmKhX5E-L9WxGsMzRnGyJzShIgKrQrI8IjRlKoJ_P7K2IxNxKqH9O_MkIlO7N0HzM3N6GpLxNkG7L1PuGrLvQkGtKxQ2FpKhSyFxJ_RmF9JtUsFlH9P8DtIjUyEhI_UsEvH9UiE1H_WkEpGzUuDjD1K2B,
+TRJ1|5263|-42489,301,120830|-6064,-258|42|540Cy2BkorHp9BylBzlBpzBuelep4BigBxf16BkgBjf18B0fjet2B2a7Y79BkctZ32BoXrU16BgWjS9mBqNrKnwBmO9J3oBwKtGpqB4I9D7oB-FRpa6CevbyB4C1cIyE3bnBsGpZvC0H3e_E2L1WpF4KlZvH2M9TzHmKtT1I8JrTjK8JtT7L8JnShNsJzQrNuIvP_N-HhOlOkHhP_Q4H1M5PuGnNlS4G7L_RiGrL3S6FxK_SsF9M1Z0GhIxRiE9G_PyDzIrVsElDtI2B
+]=],
+	kaiser = [=[TRJ1|-8000|-54309,301,123885|-1493,-887|44|jusDub8txH7-C-I1Il4CiH9Jz-CmGxMh1CmEnNp1C2CzP5pCY1P9lCX9Q3mCvC3Tt9B5DvT7tBhEnQvzBhGvU_vBjHjVrwBhJjYtnBlJnWllB7HpXvjBmD7YnhBiFlanfsD_b3ayB7a1UAvX_SLnW5EB1FdBfDAFn2BrJ3zC7VPvhB5PI9XhNZ3TpM9BxS1MTnTpMBxS_LVjS3JD5O9IFtNhKDnPzIA_MxIA_MzHAxL3IAlNtHAnLjGAnJhGAjJhCAlD,TRJ1|8000|-54309,301,123885|-1125,-1323|44|57rD-8BmgxH9kBkX3M_tCwwB7czxCoyBrgBtrC8tBngB_8B2kBjcl5B-hBzc53BygBjejvBibzblyBoc_fvjBwT9Ylb2OpUztB0XjmB3Z-MzXxc4NjdrXwK9arWqJld1R6G7ZzR6F7d9MuD9ZvMoC7dzJQxcpHhBpchFnC7ZxFvEpflE1E5X7DzF5V_DvH9WtDpHpT1DxJhVlDpJ3R1DzM7UtDtNxTlD1OpS5ChO3PrClNrNxC3PzOvCjRlOlClQpM9B1P_K_B7RvL9BnS5K3B_R9Jb1J9E,
+TRJ1|2170|-52677,301,125277|4276,8249|44|1mlD4qBgp2H-9ByWwsB6kCmYm0BykCwX81B4kC4W24Bm_B-Ti3BqyBiPsuBi1B8Og0B4uBgMkxBkoBsJktBimB4HwuBygByFirB8f-D8uBmUwB4gB0XMwqBkXxB6vBoN1C8gB2L5DwhB8I3EqfuHnGkhBsFtHghBmDpI6fuBpMgpBI9IuZI3KsbIpMsbGjNoaI9O0aI1TkfE3L0QG9P4UG_PkTExQmSExP6PGrL4UEuG4PEsIuPEkH2OEwFmOEwDgMCkCqMEQqMEdmLAAA,
+TRJ1|894|-53540,301,127267|-2913,-9439|43|5irDokBws1HzzBkJj4B5jCoKxuC75B2H3lC52BiGrlCh0BiEnmCvrBiCl-B5jBK92B5fd9zBve5C92Bja9D9yBhWlF7vB9U_GhzBlR1IzxBxNtJ_tBxI3IlkBjHzKjnB5E7I7nBvCkC1jBJ0E3iB6B-DxiBsDoC5e0EgBnfgFV_gBsEjCxcuF3EpjBiErFra8D5CrZoDoB7UkDuBvUiDG1TsDpB_V2ClCvRyCRzQqCGrPyCZxQoCN1OoCGxO8BFjM-BD1M-BB1M4BAtLqBAnI,
+TRJ1|2550|-53596,301,125279|5031,-7494|44|ljoD6tB6uyHoH2Uh9BoP6jBntD8Ngbz1CgO2WprCgR2WjvCoSoU3qC4RiQ7_BoTqOt9B4T6L53BuU0JxzByS-GjqB8VkG1sBsXwE5qBgUsC3gB0dmB9qBgYV1eoYjCtbqb1Dzb2crFrZ6Y3FnT0Z9GtRmd7IpR4b5JtP-X7JnN2YzLxN2WhMvMyUtMpLqWhPpM2T7O5K6S1PrKkR3PtJgRlRrJ2NhPvHoPnStIoP7TrImN1SnHgN5RlHmM0C1G4LqKvG0K6I5F6L-HvG8KmG_FAAA,
+TRJ1|5072|-53596,301,125279|5660,-2837|44|tonD-6BgkzHgqB4oBn-BmsBipB9-B6qB4lBj6B6mB6gB3yBorBqiBt1BiuBmiBv1ByoBwc9sBqiBiWjjBolBqW5jBwoBqWnkBmmBmTvf2jB-P1awiB4NtXkhBwLlU2hBiKlSmjB0ItQqjB8G7N8eqE7J4lBmDhJwgBgBrFokBdjDudnCL-jB7E2BsZ7EqB0VrFmBsX7GoBuZlJsB2Y3KqB2StJgBuW_MoBiQxKa6S7NiBwQ1Nc8StRgBoQ5Qc4MrOW8OzSaoMxQUwNhUYyJvPQgM7UU2LjWWAAA]=],
+	yukimiya = [=[TRJ1|-8000|-64006,301,109665|1701,-350|44|315DqiB-70GuyBsGhVw-BuGrXuiDwH5f8hC4CjRizCaxQukC3BhJm6BhD3E8wBzEHo7BpHkD49BlK8HmrBzIsIkvBnLyMgvBXoQoiCkGudqiB8BsS4iBQkVilBrBwZomB3DiequBlH0mB4fgB2akdyBwY8eAgakdvC0YsYLwUiWB0SwXT6TqULkRwbDmXuTAsQqOAiMiSAmP4RAgPuMAuKyMA0K8JAqI0PAmN2KAgJ-JAsIkIA8GuIAiHkKAyIkIA6GiBAe,
+TRJ1|8000|-64006,301,109665|1653,-531|44|tt6DgzC220GyemXzSw0B0lB1cyiC6sBlgB87B0lB9YonC6nBrWg1BoblNg0BsXhIqsBgS9Dm3B2SOoyB0OiEwnB8IgH8lB-GgJunB8E8M62B-CwXwnBLyUsjBnCoVgb9CiSktBhI6iBuiBpI4bmerJwY0a_JyV-Z1LkVykBlU2d6TxMiQqZ1SyUiRpO8N-SzRsPuV3WuRoRhUgOuO5S4LiNxS0K8RrcwOgOpYsL-L5W2JmLlXkJuKpXuIkNxgB0K6IjLmH4IoKkH2HuLoGuI-K6GsJiK2H8E-E-D,
+TRJ1|2518|-64006,301,109665|8448,-3245|42|lk6Dg7But0G-6BiY9kBizByT7d41BwS9bq9B4Tzdi5CoX5hBogCgO1Ti9BoK1NswBwG_H-pCwF7E40BwBU8uBZmE2vBlDmI89BlH4PgvB3H8P0uBhK4TiiB_ImRyqBhNyYmsB1PybghBxN8UqnB5S-Y0gB9R4U-gB7U8Uid3UuSkYnTqP4XjOiPgaqJyQ0b6LwRiTiGkMgS8DuL8RqBqL4TfyMqQ5DsK0NlF0IiNnHqI0Q_MyKgLnEgHiLkEgH2JoDkGkKYuGsJpB-F0DpBqC,
+TRJ1|3271|-64006,301,109665|7854,-3019|42|ln6DuiCyu0G8jB0SxXwhCmfzmB47B0angBo5C6iBnoBogCyVrXo-BkSjSi7BoOxMkmC2MhI81B6GvBi1BkE2C6pBuBiFimBNuHk3B1DwPgxBvFuRwlBlGyQymB_H0TmhC5RkoBsfrKkU2e9LgUyjBjQqX0hBjSgWuclR0Ssf5VyU8XzS0P-Z9WgRiX_WkPkZ5buQyShQkM4QqHgL0VsNmO4O2H2JyP4FkKsMwCmI-OG4JyL7ByH4JvDsG-I7E8FqJ5GiGsM7MkI0JxKqGgFqBoD,
+TRJ1|5505|-64006,301,109665|5163,-2482|43|_x6DyuCuq0GogBkY7ZozC45Bn8BmnBsYpY0gB-SpSyrCooB_kB80B-YrVgvB0TnP6vBuR9LymC2UpKsuB4KzC6uBiIoB-wB0FyFmrBuCsIgvBE8MsmB7BqN6mB3DkQ-xB1HgZoxBnK-bgiBrJ4Tmd3JiRue5L8RskBpRqV-iBtTwUwanRwPoT9NqLwU3QgMkehc2R2TvUwLwTrWuLuU7agM0R1ZqK8OzX4IsNnX6HqMlXoHsLpK0GsQuQ0J2K4KoGwJgIyF4I2FkFkMwEkHgJeoF8CL2B,
+TRJ1|2359|-64006,301,109665|8543,-3317|42|3j6Dm5B8s0Gu7B-WxlBwwByRzc49B-TngB4-BuS5d8_C8WrkB-xB4JnP20BmIxMg8B6GhKs7BgElFuoCcMmqBtByD2rBpD4Gs3B_GsNq0B5IuQgzB3LqVsnBvKgT2iB7KsTq1B7TghBgoB7QgZ-YpMyPuc1P6R-kBnXiXmdxUqSsYjQmP4T8CsM-UsIiN6d4K2SiQyEgKoUsD2MsPgB0JiSjBoLoXvFyO8OjGqJwOlIiJwPpJ2JgOK4I-K4C6G4KkB4G0KpB0G4KhE4GuHtC0E,
+TRJ1|1006|-64006,301,109665|8938,-4131|43|vi6D4kB8k0G-wBkI9iB-1CsLz3B8nCqHpqB-3C0EjrBiiCcnb6zBjB5Ro0B3C3OwyBjErLkiCrIhJ2qB3GlDygCvMJmsBnKoDsqBrLiGq8B0BuNmuBiEuNs5B2DiVqdIkN0mBnBkTwvBhEuYwmBzF2T-mB1D8TmcsCuO6mBe6Tmf1B8P6YtD2MkY2BqMgbH6N8ZNmNmUJqKmSHqJqUDsKiTA2JqQAsIkMAmG0LA-FgQAkI4KAwFgMAkGqKAqFuJA6EyLA8F0DA8B,
+TRJ1|5502|-64006,301,109665|5409,-1898|43|9r6DyuCuz0Gy4BomB1iBiqBmb7XonC0qBpjB-jCmkB7awkC0hB_W6yBgWxMsvBiSjI2sBiPzE44B4PZ4tBuK0CyvBiI-G2mB0E0I01BkD4Q-yBH4UwtBrDoXmgB_D8SmkBvGoY2rBrKggB2gBzJmYgiBxMsZkW5JwQ-pBtWofkYhPgSqUrOmPwVlRgQkX9UqRmY7YgS6S1ViO-QzV0MsPzVuL6S5diOsMlVmJwMrXsJ4L9X4IoO5B0K2M0MuJ8JoKsH-H4G-F4HoF4FyJ8DkHwIesG8FbsE]=],
+	rin = [=[TRJ1|3134|-45834,301,99436|-7476,4130|43|577CqzB0yiG3rC0d4CrxCifiFjhD0jB4Jz0D0oByRtmCgYiMpHwCoBpBOIruCmVqc7lEkiB21B7gCuO0fryB2HiiBzgBmD4ajiByB8gBziBpB-oB_VxC4exRzD2cvR1FqiBvPtHykBlN_IsmBrOpN0uBhLtMokB3HnKuZzJvOufhMnVynBlHpOyXjItS2arIpVsbnG3RuU5GxVsWvGzWsVrFzUyRlF7ViRzFxXsSvEC2OjE0JwNhEkKqNlE0I6N1D2FkM1DwDiM_CiB8JlDVsKpBhBsE,TRJ1|-7988|-55163,301,104390|66,1755|43|xusD2jB4puGhWwK2yBvuB8V41DtfyOy5C3eiOqkDlW4J63CpOgG6oC9IsDm8B1G-B0qCnBP65BoCrCm4BuF9DwyBsGjEklBwNlIg4BmOpIipB0RjKkqByXnN0sBgX5M-jBgWlMigB8G5DgKoBX8Bk9BrN-9BgoB_B0oBkckE8csXqDgY-UqBwVoUP6U-SvCuTwSxEgT8ShHuT4N5GkOmOxByOyNgD-N2M8BiN-NDqOsNnC4NgJrDoJmMKwMkHSsHuIN0IsHtByHsIK0IwHL2H,TRJ1|8000|-54842,301,112978|114,1733|43|j7rDw_Bw2-GrhB-qB4gCtjBswByrC_vB8mC2zD1V2jBs9B7VopBirCxO-hBkiClJ2e2gC_D-V2xBe4W65B6C0MgjBgIgPqvB2MmMuuBmOmIsmBuRmF-iBiUkDkhBwVeydmZdyd0YxC2Y4alE6XodvGqZ0ZzHkWuX5ImUmYjL8U0T5K-Q4TvMgR2VhQ4SuQ7NmOgQrP4NoRxS8O8V_a8SwM1R4KoM5SyK4M3VgL-MvYmL6KpWqJyJxVoI8IxV0H4J_ZuIyJ3boIqF3Q0EiHxXiGmFvSuE,TRJ1|6857|-54842,301,112978|480,3622|44|v0rDm-Bs4-G7S-c0uB3lB0_BuqDrZmuB0vCpW4vBw2ClOukBilC3JiiBwkC5E4bm7BRiVowBoDiXi5BsDsQ2pBuL-N8sB-M2LqpBwRiKwqBuRsG4hBiVoE-gBkYkCmfuYA2akiBtC0fgd9DyWkhBrG-XscrHqU8cxJ2Uqa5K8S2WnLqQwVnMsPgUpNqO0S_NsN0RjP0MmRrQqMuM_M-IuU5X2O-MjRoJgP5V4K8L5SwI6NlY-JuL7VmIiLjX8HkKnXqHuK7ZwH8I5XqGuI1YiGuHtXsFAAA,TRJ1|5662|-54842,301,112978|826,5440|44|hzrDs8B-5-GpQoZwrB3b6rBksC5ZmxB07C5Q0iBiiCxR2qBi1CjNsqBs5C7DmckhCPwUgyBiD8SmyBqGuQ6vBkIiNypBwK8JykBuR8LsxBsGkEwRqBc2DIEUuyCkFyrD4hB9BkiByfpE8Z0dzFsV-fhIwW8c1JoU0bnLuT-WlLkQqY5NiR8VrOsPoX1RqQsPpN6KqRtQmMiTtUsN2Q_T4LwOnTkKuOjVmK0PrZgL2K_SuH0MvY8IsKjWqHuK9XqHkKtZkHiJtYsGmI9X4FgG_PoEAAA,TRJ1|5220|-54842,301,112978|1240,6002|43|xvrD87Bk8-GjOoZ6tB3aq0BgiD5T-rBi1C5S0yBumD_I-hByoC3DsZy5BPmc8jC0C-RuuBwF2R-wB2JkRi0BkL2M-qBmOsK4oB4SyImpBiY0GmqBiYmDgiBuba8fwbjBmbod_CwYmjBtFmZ2epG4T2gBzI2UwcvJgS-YjK6PyarM6QsbvPqRsfhV6TkT_OkMkQlOmKsQ5PsKiUzV0M6S1W-LqMtQ6H6OxVsJsOjXiJ4NpY2IwJ_RgG0MnagIiK9WsG4Kta6G6JhamG8IpN0F-DqDwC,TRJ1|2752|-54842,301,112978|1838,8676|44|turD8wB6h_GpNkS6wBlZslBupDlQibqwCnO0b82ClLwe6oDhEsS2kCSyQwmCoDsNy-BwG8IqyBkK6Hm1BiO4F00B6PiD4sB-UiB8uB-c7B0yBqU9CidygBrGqnB6WtFoXwdhImaiiBnKka8dlK-Uwc9K4TyhBvPoX2etQmVuXvOmQsVzO6O4U7PqO0fnb8V8SvSgNoQ3RqLuS3V2MmSzX0MoOvK6JkN8FiJyMgJ2I4O8JmK2N6GuJmL8D4HyJ0B0GsJGwG0J3B0G0IlD-FmI5E2F0BjBkB]=],
+	karasu = [=[TRJ1|8000|-54942,301,119074|-1469,-926|44|r9sDktC8kmH1RmW1hB9f6kBz4Bhb8dtuBrhB8hBx1B9hBwf3yB5cyYroBjeoXnnBjnBobrvB7emSlhB5S-J5SxdyNjbhkB6NxdvX6GxQ7XyFjP3XkErNxX2CtL_ZoBzKtYFlIpRJzF5CBdZAHndnGxCr2B1MnEzd_JtB9U7IXvRjJTnRpKRxUrOT7RjOR9OrNPhQlQPjN1ON_MhQN1MjRLxJhOJrM9TNjKzRJ9J5SJ5H7PH1I_SJhHvQFlIxUH3BvEB,TRJ1|-8000|-54942,301,119074|-1618,-630|44|x9sDygBopnHliB6J3lBlvBqL_wBxvBuK_vB5wBuJrvBl3B6IhzBvtB4F7nBxuBmErmBvoBqCtf_mBgBzcpmBP_Z1mB3BtY1tBhEhaxjBxElSxlBrGjR_hBnHrN5kBrJnMnhB_J9I5hBzLhH1arK3D1cpMtC7Y3IV_a0Dahb-FmCrXqEgCtXkDgC5SsB0B5YEkCtUtB4BnT7C2BhSjEwBvRvFwBvP3FsB5PoBsBpOgCmBxOaoBzLNgBpNhCmB_LvCgBxLMgBtKCepJfYpKHexEDM,TRJ1|5090|-54942,301,119074|-5777,-2529|43|7rtDioCwrmH_cmYxlBnpBogB5yB1sBihB30B51B2kBz7BtlBqX7mBpxBwbjvBziB2Rhf1fqOlajqByQ1fzcyJvTndsIlSrnB6IvVjgBsFlPta0CpK7ZmBvI3aBhHzaxBpF_Z9CpD1ZrExBtYvFI9Y_G8BrVpHiC7V9ImCxVpKmC5StK8BhRzK2BtU1OiCjQ_M0BzS7Q8B1O_OuBnPhRyB7LxOmBtOvTuB1LjRmB7KzRiB1J3QgBvJ1RezJlTe9JxVgB1J1WgBpInIaAAA,TRJ1|4207|-54942,301,119074|-6887,-2769|42|1wtD4kCgsmH7boUthB_sBwepzBl5BokB_9B5eqS7f1xBobvwB_sBkW7oB3iBuPrd3wBiTjmBjd8J7UnfsJ5U1tB-K_a9bkFzOhnB6EvR5hBiCtM1iBErKrZlB_F1YxC_DrahE1ChiBpHZxXtGkBpXzHwChYtJ8CzWrK4CtS3JmC5T7LsCjT_MqC5RxNkChRzOiClQnP-BtRrSkC9L3NuBlQ1U-BzKzOqBpN9TyBpMnUwB3MhXyBtJlSkBtIxMgBxKmGoB1J4KmB_CmDM,TRJ1|2129|-54942,301,119074|-8883,-2813|43|n_sD0nBqsnHvlByPplB_kCiZ9_B1hBwLre1nCmWr9BrqByLniB3zBmMrnBh0BsKhlBlsBmHrd1uBuFncvjB-C7ThlByB5S9jBErQ3jBpBrO3yB3E1QzfrEvI3blF3FndxGxErgB_I5CrY9HTpctKc_YpKoCzarMgEnY1M8DpZ9OkEjSzLgD7SxNkDnSpO-CtS9NiD5WgD4D7OuGuC_RmH-CpQmF0CzPmDyC5OoBuCnNNmC3MhCiCtLtD8B9LpFgC_LtH-BnJ7GwBhHzFmBAAA,TRJ1|6545|-54942,301,119074|-3929,-1351|43|z2sD42BgunHhkBgftpBtqByiBtuB5lBsd3nB9sBmhBntBn1BukBhyB7uBud9oBvrBoZxjBzjBsStazjB4QtY7vByTrdpc4JlPhiBkKrQ5ZoG3KnjBsGjM_c6DlI_f8BpGrYAlDvWjBxBjiB9DMxTvD0BhalGgE3UjG-D5V_HoE3T1I8DpSrJyDzShL0DpLvHoCpW3QsE5OzM8CjNvMyCjP9P-CjMhOsCjMtPsChLnPkC5MrTwChKxQgC3KnTkC9HnPwBxKjWiCxIlT2BjJpW6BpElLa,TRJ1|5428|-54942,301,119074|-5521,-1898|43|x3sDi1B4tnHziBoc5nBxpBkfpsBx_ButBnhCr1BmjBpzBrjB2V_f9jByU3eroBuVvgBvlBkShcvrB6S7dxdkLpSlgB2KnSvhBuJ9QnhB2H3OnemFpL5dwDnJ7c8BhHtaI1EtanB9C3ZzCjBnZ_DUlYlFmCnZ7GgE3T1G2DzV1IgE3TlJ2DhRpJmD_QtKmD_U5O-D3S_OwDnS3QuDjRzRmDnNnPuC_N3R0ClKhO-B7L3RmCrLtSkC1K7SgC5K5UgCxJ9T6BvI_SyBzJvX6BvCnGQ,TRJ1|4960|-54942,301,119074|-6115,-2146|42|53sDg0BstnHjgB8YvkBjkB0atnBt0BukBv2BhrBwchrBnqBia9nBrqBmY3lBtnB6U_gBvmBwS_dnlBmQ_avkBiOlY1jB8LtVvkBuK7TnfmH7OvnBwG1PtiB-DvL3XmBjG3aApFjgB3BlEnWtCrBjY5DFvbhGgCjV5F8C5X9HkExVzI4DnV_J4DhYnNoErS5LmDtR1MiD7NnLuCpWlU-DpO1OwC9OjR0CrN7QqClR7XiD3M1TmC_K5S-BvIpPwB5LtXiCxJrU2B7KrZ-B1EhJa,TRJ1|4648|-54942,301,119074|-6511,-2241|42|r4sDkzB0tnH7lBicjqBvxBuiBp0B51BojBl2BxyB-enwBxnBsWxjB5mBsU7gB1lBmShe3qB6S7fhlBuOrZxiB4LvVztBmNzZzgBsH3P7euFjNnjBqEzM3a-B9HtdS5GvfrB7E1e9C5CjY7DL1ZvFsBjYtG6CtXzHgE9VxI8DvUtJ2D9UhL2DjTzLuD1S9MqD9QlNgD5P3N6CxP7O6ChMzMkCtQlT-CjO_RwCxLnQiCpNpUsC5NtXuCzKvT-BjLtW-BxJ1U2B3J5N4BxD0DU,TRJ1|4102|-54942,301,119074|-7163,-2369|42|h6sD6xButnH9jBuYvmB7zBqhBj1Bh0Bsf5yBlvBuaxrB7nB6U_iBrtBgW1lBnwBoVtlBvqBwQne7kB2MnY_lBqL5WzwB2L3Z9dyF7N5fuE9MprBwDtO5aWjHndX7F3mBtD7E3d7Ef_azFUxXpGoCvXxH4DjdvLqF3V_JgE3U_K4DlT5LyD_SnNuDxR1NoDpQhO-C5PjP-CrOnP0C5O9Q2CtRxWmDtM1RqCnK1P8BhMhUmCpLvUkCxJzS2BhLnGiCnI8HwB9I2J0BAAA
+]=],
+}
+
+alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+alphabet_index = {}
+for i = 1, #alphabet do alphabet_index[alphabet:sub(i, i)] = i - 1 end
+
+function st_decode(tok)
+	p = tok:split("|")
+	n = tonumber(p[5])
+	pp = p[3]:split(",")
+	lk = p[4]:split(",")
+	if p[1] ~= "TRJ1" or not n then return end
+	pos = Vector3.new(tonumber(pp[1]), tonumber(pp[2]), tonumber(pp[3])) / 100
+	f = Vector3.new(tonumber(lk[1]) / 1e4, 0, tonumber(lk[2]) / 1e4)
+	f = f.Magnitude < 1e-3 and Vector3.new(0, 0, -1) or f.Unit
+	r = Vector3.new(-f.Z, 0, f.X)
+	values = {}
+	v = 0
+	m = 1
+	for c in p[6]:gmatch(".") do
+		d = alphabet_index[c]
+		if not d then return end
+		v = v + (d % 32) * m
+		if d >= 32 then
+			m = m * 32
+		else
+			values[#values + 1] = v % 2 == 1 and -(v + 1) / 2 or v / 2
+			v = 0
+			m = 1
+		end
+	end
+	if m ~= 1 or #values ~= n * 3 then return end
+	w = {}
+	rel = {}
+	x = 0
+	y = 0
+	z = 0
+	for i = 1, n do
+		x = x + values[i * 3 - 2]
+		y = y + values[i * 3 - 1]
+		z = z + values[i * 3]
+		pt = Vector3.new(x, y, z) / 100
+		d = pt - pos
+		w[i] = pt
+		rel[i] = Vector3.new(d:Dot(r), d.Y, d:Dot(f))
+	end
+	return {pitch = tonumber(p[2]) / 100, world = w, rel = rel}
+end
+
+local folder = Instance.new("Folder")
+folder.Name = "DecodedTrajectories"
+
+function st_make_part(color, ball)
+	p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	if ball then
+		p.Shape = Enum.PartType.Ball
+		p.Size = Vector3.one * 0.8
+	end
+	p.Parent = folder
+	return p
+end
+
+function st_layout(l, pts)
+	style = st_find_style()
+	hide_for_autotop = st_autotop and st_autotop_held and not st_autotop_blacklist[style]
+	line_alpha = hide_for_autotop and 1 or 0
+	for i = 1, #pts - 1 do
+		a = pts[i]
+		b = pts[i + 1]
+		d = (b - a).Magnitude
+		seg = l.segments[i]
+		seg.Transparency = line_alpha
+		seg.Size = Vector3.new(st_linethickness, st_linethickness, math.max(d, 0.01))
+		seg.CFrame = d > 0.01 and CFrame.lookAt(a:Lerp(b, 0.5), b) or CFrame.new(b)
+	end
+	for i = #pts, #l.segments do
+		l.segments[i].Transparency = 1
+	end
+	l.start_marker.Position = pts[1]
+	l.end_marker.Position = pts[#pts]
+	marker_alpha = (hide_for_autotop and st_hidemarkers) and 1 or 0
+	l.start_marker.Transparency = marker_alpha
+	l.end_marker.Transparency = marker_alpha
+end
+
+local ray_params = RaycastParams.new()
+ray_params.FilterType = Enum.RaycastFilterType.Exclude
+ray_params.RespectCanCollide = true
+local ignore = {}
+
+function st_cast(a, b)
+	for _ = 1, 5 do
+		hit = workspace:Raycast(a, b - a, ray_params)
+		if not hit or hit.Instance.Parent ~= workspace.Terrain then return hit end
+		table.insert(ignore, hit.Instance)
+		ray_params.FilterDescendantsInstances = ignore
+	end
+end
+
+local anchors = {}
+local live = nil
+local enabled = false
+local path_count = nil
+
+local cached_style = ""
+local cached_style_time = 0
+
+function st_find_style()
+	now = os.clock()
+	if now - cached_style_time < 0.4 then
+		return cached_style
+	end
+	cached_style_time = now
+	for _, holder in ipairs({player, player.Character}) do
+		if holder then
+			for name, value in pairs(holder:GetAttributes()) do
+				if name:lower() == "style" then
+					cached_style = tostring(value):lower()
+					return cached_style
+				end
+			end
+			for _, child in ipairs(holder:GetChildren()) do
+				if child.Name:lower() == "style" and child:IsA("ValueBase") then
+					cached_style = tostring(child.Value):lower()
+					return cached_style
+				end
+			end
+		end
+	end
+	cached_style = ""
+	return cached_style
+end
+
+function st_sample(rel, u)
+	x = u * (#rel - 1) + 1
+	i = math.min(math.floor(x), #rel - 1)
+	return rel[i]:Lerp(rel[i + 1], x - i)
+end
+
+function st_new_line(color, count)
+	l = {segments = {}, start_marker = st_make_part(Color3.fromRGB(0, 255, 0), true), end_marker = st_make_part(Color3.fromRGB(255, 0, 0), true)}
+	for i = 1, count - 1 do
+		l.segments[i] = st_make_part(color)
+	end
+	return l
+end
+
+function st_rebuild()
+	folder:ClearAllChildren()
+	anchors = {}
+	live = nil
+	style = tostring(st_find_style()):lower()
+	st_currentconfig = st_styleconfig[style] or st_defaultconfig
+	st_currentlinelength = st_currentconfig.length
+	data = st_shotsbystyle[style]
+	if not data then
+		task.wait(1)
+		starter_gui:SetCore("SendNotification", {
+			Title = "invalid style",
+			Text = "this style doesnt have base curve shot or isnt added yet.",
+			Duration = 3,
+			Button1 = "alright fella",
+		})
+		st_clear_rings()
+		return
+	end
+	data = data:gsub(",%s*TRJ1", "\nTRJ1")
+	count = 0
+	for tok in data:gmatch("TRJ1|[%w%-_|,]+") do
+		shot = st_decode(tok)
+		if shot then
+			shot.pitch = math.max(shot.pitch, st_pitchoffset)
+			table.insert(anchors, shot)
+			count = math.max(count, #shot.world)
+		end
+	end
+	if #anchors == 0 then
+		st_clear_rings()
+		return
+	end
+	table.sort(anchors, function(a, b) return a.pitch < b.pitch end)
+	path_count = count
+	for _, shot in ipairs(anchors) do
+		shot.pts = {}
+		for k = 1, count do
+			shot.pts[k] = st_sample(shot.rel, (k - 1) / (count - 1))
+		end
+	end
+	if st_mode == "world" then
+		for i, shot in ipairs(anchors) do
+			st_layout(st_new_line(st_linecolors[(i - 1) % #st_linecolors + 1], #shot.world), shot.world)
+		end
+	else
+		live = st_new_line(st_linecolors[1], count)
+	end
+end
+
+function st_plane_hit(q, dc, h)
+	ph_best = math.huge
+	ph_bk = 1
+	ph_bs = 0
+	ph_ax = math.sqrt(q[1].X ^ 2 + q[1].Z ^ 2)
+	ph_ay = q[1].Y
+	for k = 1, #q - 1 do
+		ph_b = q[k + 1]
+		ph_bx = math.sqrt(ph_b.X ^ 2 + ph_b.Z ^ 2)
+		ph_by = ph_b.Y
+		ph_vx = ph_bx - ph_ax
+		ph_vy = ph_by - ph_ay
+		ph_l2 = ph_vx * ph_vx + ph_vy * ph_vy
+		ph_s = ph_l2 > 1e-9 and math.clamp(((dc - ph_ax) * ph_vx + (h - ph_ay) * ph_vy) / ph_l2, 0, 1) or 0
+		ph_ex = ph_ax + ph_vx * ph_s - dc
+		ph_ey = ph_ay + ph_vy * ph_s - h
+		ph_e = ph_ex * ph_ex + ph_ey * ph_ey
+		if ph_e < ph_best then
+			ph_best = ph_e
+			ph_bk = k
+			ph_bs = ph_s
+		end
+		ph_ax = ph_bx
+		ph_ay = ph_by
+	end
+	return math.sqrt(ph_best), ph_bk, ph_bs
+end
+
+function st_blend_for(pitch)
+	lo = anchors[1]
+	hi = anchors[1]
+	for i = 1, #anchors - 1 do
+		if pitch <= anchors[i + 1].pitch then
+			lo = anchors[i]
+			hi = anchors[i + 1]
+			break
+		end
+	end
+	t = hi.pitch > lo.pitch and (pitch - lo.pitch) / (hi.pitch - lo.pitch) or 0
+	return lo, hi, t
+end
+
+function st_path_q(pitch, n)
+	lo, hi, t = st_blend_for(pitch)
+	q = {}
+	for k = 1, n do
+		q[k] = lo.pts[k]:Lerp(hi.pts[k], t)
+	end
+	return q
+end
+
+local goals = {}
+local goals_time = 0
+local fire_ready_at = 0
+local fire_hold = nil
+
+local slow_active = false
+local slow_end = 0
+local slow_ready_at = 0
+local slow_base = nil
+local slow_hum = nil
+local was_locked = false
+
+function st_slow_stop(start_cooldown)
+	if slow_active and slow_hum and slow_hum.Parent and slow_base then
+		slow_hum.WalkSpeed = slow_base
+	end
+	if slow_active and start_cooldown then
+		slow_ready_at = os.clock() + st_slowcooldown
+	end
+	slow_active = false
+	slow_base = nil
+	slow_hum = nil
+end
+
+function st_slow_tick()
+	if not slow_active then return end
+	char = player.Character
+	hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hum or hum ~= slow_hum then
+		slow_active = false
+		slow_base = nil
+		slow_hum = nil
+		return
+	end
+	if os.clock() >= slow_end then
+		st_slow_stop(true)
+		return
+	end
+	hum.WalkSpeed = slow_base * st_slowfactor
+end
+
+function st_slow_begin()
+	if slow_active or os.clock() < slow_ready_at then return end
+	char = player.Character
+	hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hum then return end
+	slow_active = true
+	slow_hum = hum
+	slow_base = hum.WalkSpeed
+	slow_end = os.clock() + st_fireduration
+	hum.WalkSpeed = slow_base * st_slowfactor
+end
+
+function st_fire_skill()
+	skill = st_currentconfig.skill
+	if not skill or os.clock() < fire_ready_at then return end
+	if not NET or not buffers then return end
+	fire_ready_at = os.clock() + st_fireduration + st_firecooldown
+	task.spawn(function()
+		for i = 1, st_firecount do
+			pcall(function()
+				NET:FireServer(buffer.fromstring(buffers["base"]), {{skill}})
+			end)
+			if i < st_firecount then task.wait(st_fireduration / st_firecount) end
+		end
+	end)
+	return true
+end
+
+function st_hold_end()
+	fire_hold = nil
+end
+
+function st_hold_freeze(h)
+	h.root.CFrame = h.cf
+	h.root.AssemblyLinearVelocity = Vector3.zero
+	h.root.AssemblyAngularVelocity = Vector3.zero
+end
+
+function st_hold_begin(lock, root)
+	h = {lock = lock, root = root, stop_at = os.clock() + st_fireduration, cf = root.CFrame}
+	fire_hold = h
+	if st_freeze then st_hold_freeze(h) end
+	task.delay(st_fireduration, function()
+		if fire_hold == h then st_hold_end() end
+	end)
+end
+
+function st_target_goal()
+	team = player.Team and player.Team.Name
+	map = workspace:FindFirstChild("map")
+	if not map then return nil end
+	if team == "A" then return map:FindFirstChild("Bgoal") end
+	if team == "B" then return map:FindFirstChild("Agoal") end
+	return nil
+end
+
+function st_goal_name_ok(name)
+	name = name:lower()
+	ok = false
+	for _, k in ipairs(st_goalnames) do
+		if name:find(k, 1, true) then ok = true end
+	end
+	if not ok then return false end
+	for _, k in ipairs(st_goalexclude) do
+		if name:find(k, 1, true) then return false end
+	end
+	return true
+end
+
+function st_goal_info(inst)
+	if inst:IsA("Model") then
+		cf, size = inst:GetBoundingBox()
+	else
+		cf = inst.CFrame
+		size = inst.Size
+	end
+	axes = {{cf.RightVector, size.X}, {cf.UpVector, size.Y}, {cf.LookVector, size.Z}}
+	table.sort(axes, function(a, b) return math.abs(a[1].Y) > math.abs(b[1].Y) end)
+	wa = axes[2]
+	da = axes[3]
+	if da[2] > wa[2] then
+		wa = da
+		da = axes[2]
+	end
+	return {
+		inst = inst,
+		center = cf.Position,
+		height = axes[1][2],
+		width = wa[2],
+		depth = da[2],
+		wdir = Vector3.new(wa[1].X, 0, wa[1].Z).Unit,
+		ddir = Vector3.new(da[1].X, 0, da[1].Z).Unit,
+	}
+end
+
+function st_find_goals()
+	if os.clock() - goals_time < 3 then return goals end
+	goals_time = os.clock()
+	goals = {}
+	list = {}
+	if st_goals then
+		for _, g in ipairs(st_goals) do table.insert(list, g) end
+	else
+		root = workspace:FindFirstChild("map") or workspace
+		picked = {}
+		for _, d in ipairs(root:GetDescendants()) do
+			if (d:IsA("Model") or d:IsA("BasePart")) and st_goal_name_ok(d.Name) and not d:IsDescendantOf(workspace.Terrain) then
+				nested = false
+				a = d.Parent
+				while a and a ~= root do
+					if picked[a] then nested = true end
+					a = a.Parent
+				end
+				container = false
+				if d:IsA("Model") then
+					for _, c in ipairs(d:GetChildren()) do
+						if c:IsA("Model") and st_goal_name_ok(c.Name) then container = true end
+					end
+				end
+				if not nested and not container then
+					picked[d] = true
+					table.insert(list, d)
+				end
+			end
+		end
+	end
+	for _, inst in ipairs(list) do
+		ok, info = pcall(st_goal_info, inst)
+		if ok and info.width >= st_goalminwidth then table.insert(goals, info) end
+	end
+	return goals
+end
+
+function st_goal_corners(g, from)
+	s = (from - g.center):Dot(g.ddir) >= 0 and 1 or -1
+	front = g.center + g.ddir * (s * g.depth / 2)
+	aimdrop = st_currentconfig.aimdrop or st_aimdrop
+	aiminset = st_currentconfig.aiminset or st_aiminset
+	top = Vector3.new(front.X, g.center.Y + g.height / 2 - 1 - st_cornerinset - aimdrop, front.Z)
+	w = g.width / 2 - 1 - st_cornerinset - aiminset
+	return {top + g.wdir * w, top - g.wdir * w}, front, g.ddir * -s
+end
+
+function st_near_dist(pts, pos)
+	best = math.huge
+	for k = 1, #pts - 1 do
+		a = pts[k]
+		b = pts[k + 1]
+		v = b - a
+		l2 = v:Dot(v)
+		s = l2 > 1e-9 and math.clamp((pos - a):Dot(v) / l2, 0, 1) or 0
+		best = math.min(best, (a + v * s - pos).Magnitude)
+	end
+	return best
+end
+
+function st_build_wall_list()
+	list = {}
+	for _, v in ipairs(ignore) do table.insert(list, v) end
+	for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+		if p.Character then table.insert(list, p.Character) end
+	end
+	for _, g in ipairs(st_find_goals()) do
+		if g.inst then table.insert(list, g.inst) end
+	end
+	table.insert(list, ring_folder)
+	table.insert(list, folder)
+	return list
+end
+
+function st_wall_clear(pts, pos, base_list)
+	list = {}
+	for i = 1, #base_list do list[i] = base_list[i] end
+	params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.RespectCanCollide = true
+	params.FilterDescendantsInstances = list
+	origin = pts[1]
+	first = #pts
+	for k = 1, #pts do
+		if (pts[k] - origin).Magnitude >= st_wallstart then
+			first = k
+			break
+		end
+	end
+	size = Vector3.new(st_wallsize, st_wallsize, 0.2)
+	step = math.max(1, st_wallstep)
+	k = first
+	a = pts[first]
+	while k < #pts do
+		nk = math.min(k + step, #pts)
+		b = pts[nk]
+		dir = b - a
+		if dir.Magnitude > 0.05 then
+			cf = CFrame.lookAt(a, b)
+			for _ = 1, 6 do
+				hit = workspace:Blockcast(cf, size, dir, params)
+				if not hit then break end
+				if (hit.Position - pos).Magnitude <= st_wallend then return true end
+				if hit.Instance.Parent == workspace.Terrain or hit.Normal.Y > 0.7 then
+					table.insert(list, hit.Instance)
+					params.FilterDescendantsInstances = list
+				else
+					return false
+				end
+			end
+		end
+		a = b
+		k = nk
+	end
+	return true
+end
+
+local lock_cache = nil
+local lock_cache_time = 0
+local lock_throttle = 0.07
+local last_origin = Vector3.zero
+local last_look = Vector3.zero
+
+function st_find_lock(origin, look)
+	style = st_find_style()
+	if st_autotop_blacklist[style] then return nil end
+	if not st_shotsbystyle[style] then return nil end
+	now = os.clock()
+	look_flat = Vector3.new(look.X, 0, look.Z)
+	moved = (origin - last_origin).Magnitude > 1.2
+	turned = look_flat.Magnitude > 0.01 and last_look.Magnitude > 0.01 and look_flat.Unit:Dot(last_look.Unit) < 0.985
+	if lock_cache and (now - lock_cache_time) < lock_throttle and not moved and not turned then
+		return lock_cache
+	end
+	if #anchors == 0 or not path_count then return nil end
+	if look_flat.Magnitude < 1e-3 then
+		if st_requirefacing then return nil end
+		look_flat = Vector3.new(0, 0, 1)
+	end
+	look_flat = look_flat.Unit
+	target_goal = st_target_goal()
+	if not target_goal then return nil end
+	corners = {}
+	mind = st_currentconfig.mindist
+	maxd = st_currentconfig.maxdist
+	for _, g in ipairs(st_find_goals()) do
+		if g.inst ~= target_goal and not g.inst:IsDescendantOf(target_goal) then continue end
+		pts, front, into = st_goal_corners(g, origin)
+		to = Vector3.new(front.X - origin.X, 0, front.Z - origin.Z)
+		dist = to.Magnitude
+		if dist > 1 and dist >= mind and dist <= maxd and (not st_requirefacing or to.Unit:Dot(look_flat) > 0.2) then
+			mid = (pts[1] + pts[2]) / 2
+			half = (pts[1] - pts[2]).Magnitude / 2
+			for _, c in ipairs(pts) do
+				inward = Vector3.new(mid.X - c.X, 0, mid.Z - c.Z)
+				table.insert(corners, {
+					pos = c,
+					inward = inward.Magnitude > 1e-6 and inward.Unit or Vector3.zero,
+					maxslide = math.min(half, 10),
+					into = into,
+				})
+			end
+		end
+	end
+	if #corners == 0 then
+		lock_cache = nil
+		return nil
+	end
+	wall_list = st_build_wall_list()
+	pmin = anchors[1].pitch
+	pmax = anchors[#anchors].pitch
+	n = path_count
+	steps = math.max(1, math.ceil((pmax - pmin) * 0.55))
+	paths = {}
+	for i = 0, steps do
+		p = pmin + (pmax - pmin) * i / steps
+		paths[i] = {p = p, q = st_path_q(p, n)}
+	end
+	cur_r = Vector3.new(-look_flat.Z, 0, look_flat.X)
+	cur_pitch = math.clamp(math.deg(math.asin(math.clamp(look.Y, -1, 1))), pmin, pmax)
+	cur_q = st_path_q(cur_pitch, n)
+	cur_pts = {}
+	for k = 1, #cur_q do
+		cur_pts[k] = origin + cur_r * cur_q[k].X + Vector3.new(0, cur_q[k].Y, 0) + look_flat * cur_q[k].Z
+	end
+	function solve(pos)
+		sv_dc = Vector3.new(pos.X - origin.X, 0, pos.Z - origin.Z).Magnitude
+		sv_h = pos.Y - origin.Y
+		sv_best = nil
+		for i = 0, steps do
+			sv_e, sv_k, sv_s = st_plane_hit(paths[i].q, sv_dc, sv_h)
+			if not sv_best or sv_e < sv_best.err then
+				sv_best = {err = sv_e, p = paths[i].p, k = sv_k, s = sv_s, q = paths[i].q}
+			end
+		end
+		if not sv_best then return nil end
+		sv_c = sv_best.p
+		for i = -6, 6 do
+			sv_p = math.clamp(sv_c + i * 0.15, pmin, pmax)
+			sv_q = st_path_q(sv_p, n)
+			sv_e, sv_k, sv_s = st_plane_hit(sv_q, sv_dc, sv_h)
+			if sv_e < sv_best.err then
+				sv_best = {err = sv_e, p = sv_p, k = sv_k, s = sv_s, q = sv_q}
+			end
+		end
+		return sv_best
+	end
+	function evaluate(pos, sol, into)
+		if not sol or sol.err > st_locktol then return end
+		if st_requirefacing and st_near_dist(cur_pts, pos) > st_snapdist then return end
+		ev_qs = sol.q[sol.k]:Lerp(sol.q[sol.k + 1], sol.s)
+		ev_dx = pos.X - origin.X
+		ev_dz = pos.Z - origin.Z
+		ev_fx = ev_dx * ev_qs.Z + ev_dz * ev_qs.X
+		ev_fz = ev_dz * ev_qs.Z - ev_dx * ev_qs.X
+		ev_m = math.sqrt(ev_fx * ev_fx + ev_fz * ev_fz)
+		if ev_m < 1e-6 then return end
+		ev_fx = ev_fx / ev_m
+		ev_fz = ev_fz / ev_m
+		ev_f = Vector3.new(ev_fx, 0, ev_fz)
+		ev_r = Vector3.new(-ev_fz, 0, ev_fx)
+		ev_seg = sol.q[sol.k + 1] - sol.q[sol.k]
+		ev_hdir = ev_f * ev_seg.Z + ev_r * ev_seg.X
+		ev_entry = ev_hdir.Magnitude > 1e-6 and ev_hdir.Unit:Dot(into) or 0
+		if ev_entry < math.cos(math.rad(st_currentconfig.maxentry)) then return end
+		ev_pts = {}
+		ev_len = 0
+		for j = 1, sol.k do
+			ev_pts[j] = origin + ev_r * sol.q[j].X + Vector3.new(0, sol.q[j].Y, 0) + ev_f * sol.q[j].Z
+		end
+		ev_pts[sol.k + 1] = pos
+		for j = 2, #ev_pts do
+			ev_len = ev_len + (ev_pts[j] - ev_pts[j - 1]).Magnitude
+		end
+		if st_requirereach and ev_len > st_currentlinelength then return end
+		if not st_wall_clear(ev_pts, pos, wall_list) then return end
+		ev_rad = math.rad(sol.p)
+		return {dir = Vector3.new(ev_fx * math.cos(ev_rad), math.sin(ev_rad), ev_fz * math.cos(ev_rad)), k = sol.k, s = sol.s, pos = pos}
+	end
+	lk_best = nil
+	for _, c in ipairs(corners) do
+		slide = 0
+		while slide <= c.maxslide do
+			pos = c.pos + c.inward * slide
+			res = evaluate(pos, solve(pos), c.into)
+			if res then
+				res.slide = slide
+				res.near = st_near_dist(cur_pts, pos)
+				if not lk_best or res.slide < lk_best.slide - 1e-6 or (math.abs(res.slide - lk_best.slide) < 1e-6 and res.near < lk_best.near) then
+					lk_best = res
+				end
+				break
+			end
+			slide = slide + 1.8
+		end
+	end
+	lock_cache = lk_best
+	lock_cache_time = now
+	last_origin = origin
+	last_look = look_flat
+	return lk_best
+end
+
+local ring_folder = Instance.new("Folder")
+ring_folder.Name = "TrajectoryRings"
+local ring_key = nil
+
+function st_clear_rings()
+	if ring_key then
+		ring_folder:ClearAllChildren()
+		ring_key = nil
+	end
+end
+
+function st_make_ring(center, radius, color)
+	count = math.clamp(math.ceil(radius / 3.5), 20, 96)
+	prev = nil
+	for i = 0, count do
+		a = i / count * math.pi * 2
+		pt = center + Vector3.new(math.cos(a) * radius, 0, math.sin(a) * radius)
+		if prev then
+			seg = Instance.new("Part")
+			seg.Anchored = true
+			seg.CanCollide = false
+			seg.CanQuery = false
+			seg.CanTouch = false
+			seg.CastShadow = false
+			seg.Material = Enum.Material.SmoothPlastic
+			seg.Color = color
+			seg.Transparency = st_ringtransparency
+			seg.Size = Vector3.new(st_ringthickness, st_ringthickness, (pt - prev).Magnitude + 0.15)
+			seg.CFrame = CFrame.lookAt(prev:Lerp(pt, 0.5), pt)
+			seg.Parent = ring_folder
+		end
+		prev = pt
+	end
+end
+
+function st_update_rings(origin)
+	style = st_find_style()
+	if not st_shotsbystyle[style] or st_autotop_blacklist[style] then
+		st_clear_rings()
+		return
+	end
+	target = st_target_goal()
+	goal = nil
+	if target then
+		for _, g in ipairs(st_find_goals()) do
+			if g.inst == target or g.inst:IsDescendantOf(target) then
+				goal = g
+				break
+			end
+		end
+	end
+	if not goal then
+		st_clear_rings()
+		return
+	end
+	_, front = st_goal_corners(goal, origin)
+	cfg = st_styleconfig[style] or st_defaultconfig
+	ex = {ring_folder, folder, goal.inst}
+	for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+		if p.Character then table.insert(ex, p.Character) end
+	end
+	params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.RespectCanCollide = true
+	params.FilterDescendantsInstances = ex
+	hit = workspace:Raycast(Vector3.new(front.X, goal.center.Y + 5, front.Z), Vector3.new(0, -200, 0), params)
+	ground = hit and hit.Position.Y or (goal.center.Y - goal.height / 2)
+	center = Vector3.new(front.X, ground + st_ringheight, front.Z)
+	key = string.format("%d,%d,%d,%d,%d", math.floor(center.X + 0.5), math.floor(center.Z + 0.5), math.floor(center.Y * 10), cfg.mindist, cfg.maxdist)
+	if key ~= ring_key then
+		st_clear_rings()
+		ring_key = key
+		mind = cfg.mindist
+		maxd = cfg.maxdist
+		if mind > 0 then
+			st_make_ring(center, mind, st_ringcolor)
+		end
+		st_make_ring(center, maxd, st_ringcolor)
+	end
+	if ring_folder.Parent ~= workspace then
+		ring_folder.Parent = workspace
+	end
+end
+
+local ring_last = 0
+local ring_conn = run_service.Heartbeat:Connect(function()
+	if os.clock() - ring_last < 0.3 then return end
+	ring_last = os.clock()
+	if not (st_autotop and st_autotop_held and st_showrings) then
+		st_clear_rings()
+		return
+	end
+	char = player.Character
+	root = char and char:FindFirstChild("HumanoidRootPart")
+	if root then st_update_rings(root.Position) end
+end)
+
+function st_render()
+	st_slow_tick()
+	cam = workspace.CurrentCamera
+	root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not enabled or not live or not cam or not root then
+		was_locked = false
+		return
+	end
+	ignore = {
+		folder,
+		ring_folder,
+		player.Character,
+	}
+	if workspace:FindFirstChild("map") and workspace.map:FindFirstChild("gkbarriar") then
+		if workspace.map.gkbarriar:FindFirstChild("Abarriar") then table.insert(ignore, workspace.map.gkbarriar.Abarriar) end
+		if workspace.map.gkbarriar:FindFirstChild("Bbarriar") then table.insert(ignore, workspace.map.gkbarriar.Bbarriar) end
+	end
+	ray_params.FilterDescendantsInstances = ignore
+	look = cam.CFrame.LookVector
+	lock = nil
+	if fire_hold and fire_hold.root.Parent and os.clock() < fire_hold.stop_at then
+		lock = fire_hold.lock
+		if st_freeze then st_hold_freeze(fire_hold) end
+	else
+		if fire_hold then st_hold_end() end
+		lock = st_autotop and st_autotop_held and st_find_lock(root.Position, look)
+	end
+	rising = lock and not was_locked
+	if rising then st_slow_begin() end
+	was_locked = lock and true or false
+	if lock then
+		look = lock.dir
+		cam.CFrame = CFrame.lookAt(cam.CFrame.Position, cam.CFrame.Position + look)
+		if rising and st_autofire and st_fire_skill() then
+			st_hold_begin(lock, root)
+		end
+	end
+	f = Vector3.new(look.X, 0, look.Z)
+	if f.Magnitude < 1e-3 then return end
+	f = f.Unit
+	r = Vector3.new(-f.Z, 0, f.X)
+	pitch = math.clamp(math.deg(math.asin(math.clamp(look.Y, -1, 1))), anchors[1].pitch, anchors[#anchors].pitch)
+	q = st_path_q(pitch, #live.segments + 1)
+	pts = {}
+	for k = 1, #q do
+		pts[k] = root.Position + r * q[k].X + Vector3.new(0, q[k].Y, 0) + f * q[k].Z
+	end
+	if lock then
+		pts[lock.k + 1] = pts[lock.k]:Lerp(pts[lock.k + 1], lock.s)
+		for j = #pts, lock.k + 2, -1 do
+			pts[j] = nil
+		end
+	end
+	travelled = 0
+	for k = 2, #pts do
+		step = pts[k] - pts[k - 1]
+		if travelled + step.Magnitude > st_currentlinelength then
+			pts[k] = pts[k - 1] + step.Unit * (st_currentlinelength - travelled)
+			for j = #pts, k + 1, -1 do
+				pts[j] = nil
+			end
+			break
+		end
+		travelled = travelled + step.Magnitude
+	end
+	for k = 2, #pts do
+		hit = st_cast(pts[k - 1], pts[k])
+		if hit then
+			for j = #pts, k + 1, -1 do
+				pts[j] = nil
+			end
+			pts[k] = hit.Position
+			break
+		end
+	end
+	st_layout(live, pts)
+end
+
+run_service:BindToRenderStep("shot_predictor", Enum.RenderPriority.Camera.Value + 1, st_render)
+local render_conn = {Disconnect = function() run_service:UnbindFromRenderStep("shot_predictor") end}
+
+local connections = {}
+
+function watch(holder)
+	table.insert(connections, holder.AttributeChanged:Connect(function(name)
+		if enabled and name:lower() == "style" then
+			cached_style_time = 0
+			st_rebuild()
+		end
+	end))
+end
+
+watch(player)
+if player.Character then watch(player.Character) end
+table.insert(connections, player.CharacterAdded:Connect(function(char)
+	watch(char)
+	cached_style_time = 0
+	if enabled then st_rebuild() end
+end))
+
+_G.clear_trajectory_lines = function()
+	st_hold_end()
+	st_autotop_held = false
+	render_conn:Disconnect()
+	ring_conn:Disconnect()
+	if st_input_began_conn then st_input_began_conn:Disconnect() end
+	if st_input_ended_conn then st_input_ended_conn:Disconnect() end
+	ring_folder:Destroy()
+	st_slow_stop(false)
+	for _, c in ipairs(connections) do c:Disconnect() end
+	folder:Destroy()
+end
+
+shotfeats:Toggle("Shot Predictor", "Shows Predicted (NOT EXACT) Trajectory Of Style's Base Curve Shot.", function(state)
+	enabled = state
+	if enabled then
+		st_rebuild()
+		folder.Parent = workspace
+	else
+		folder.Parent = nil
+		st_clear_rings()
+	end
+	starter_gui:SetCore("SendNotification", {Title = "Shot Predictor", Text = enabled and "Enabled." or "Disabled.", Duration = 3})
+end)
+
+shotfeats:Toggle("Auto Top Bins", "Req. Shot Predictor On. Hold Bind While Within Rings To Lock Onto Top Bins.", function(state)
+	st_autotop = state
+	if not state then
+		st_autotop_held = false
+		st_hold_end()
+		st_slow_stop(false)
+		st_clear_rings()
+		lock_cache = nil
+	end
+	goals_time = 0
+	n = #st_find_goals()
+	msg = not state and "Disabled." or n == 0 and "No Goal Found. Disable The Feature, Pick A Team, & Re-Enable." or "Enabled. Hold M2 (Or Your Bind) To Use."
+	starter_gui:SetCore("SendNotification", {Title = "Auto Top Bins", Text = msg, Duration = 3})
+end)
+
+if shotfeats.Textbox or shotfeats.Input or shotfeats.Box then
+	local box_fn = shotfeats.Textbox or shotfeats.Input or shotfeats.Box
+	box_fn(shotfeats, "Auto Top Bins Bind", "Enter Key (Example: E, M1, Mouse2). Default Is M2. Blank Resets To M2.", function(text)
+		st_set_autotop_bind(text)
+	end)
+else
+	_G.st_set_autotop_bind = st_set_autotop_bind
+end
+    end
+    installShootingAssistance()
+end
+-- END: Shooting Assistance
+
 local othersil = maintab2:Folder("Other Features.", Color3.fromRGB(169, 5, 255), true)
 othersil:Label("Other Features: Self Explanatory, Other Silent Features.")
 
